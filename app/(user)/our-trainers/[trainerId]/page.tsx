@@ -67,7 +67,10 @@ export default function TrainerDetailPage({
             </h5>
             <ul className="space-y-1">
               {trainer.expertise?.map((expertise: string) => (
-                <li key={expertise} className="text-[12px] text-muted-foreground sm:text-[14px]">
+                <li
+                  key={expertise}
+                  className="text-[12px] text-muted-foreground sm:text-[14px]"
+                >
                   - {expertise}
                 </li>
               ))}
@@ -91,12 +94,8 @@ export default function TrainerDetailPage({
       <div className="mx-auto my-10 max-w-7xl rounded-lg border bg-card p-5">
         <Tabs defaultValue="30_mint" className="w-full">
           <TabsList>
-            <TabsTrigger value="30_mint">
-              30 Minutes Session
-            </TabsTrigger>
-            <TabsTrigger value="60_mint">
-              60 Minutes Session
-            </TabsTrigger>
+            <TabsTrigger value="30_mint">30 Minutes Session</TabsTrigger>
+            <TabsTrigger value="60_mint">60 Minutes Session</TabsTrigger>
           </TabsList>
           <TabsContent value="30_mint" className="my-10">
             {sessions30Min.length === 0 ? (
