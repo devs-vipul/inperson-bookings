@@ -39,6 +39,8 @@ export default defineSchema({
     sessionsPerWeek: v.number(), // 1-5 sessions per week
     duration: v.number(), // 30 or 60 minutes
     price: v.number(), // Price per week
+    stripeProductId: v.optional(v.string()), // Stripe Product ID
+    stripePriceId: v.optional(v.string()), // Stripe Price ID
     isArchived: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -77,13 +79,22 @@ export default defineSchema({
       })
     ),
     status: v.string(), // "pending", "confirmed", "cancelled", "completed"
+    // Stripe payment fields
+    stripeCheckoutSessionId: v.optional(v.string()), // Stripe Checkout Session ID
+    stripeSubscriptionId: v.optional(v.string()), // Stripe Subscription ID for recurring payments
+    stripeCustomerId: v.optional(v.string()), // Stripe Customer ID
+    paymentStatus: v.optional(v.string()), // "pending", "paid", "failed", "refunded"
+    amountPaid: v.optional(v.number()), // Amount paid in cents
+    currency: v.optional(v.string()), // Currency code (e.g., "usd")
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user_id", ["userId"])
     .index("by_trainer_id", ["trainerId"])
     .index("by_session_id", ["sessionId"])
-    .index("by_user_status", ["userId", "status"]),
+    .index("by_user_status", ["userId", "status"])
+    .index("by_stripe_session", ["stripeCheckoutSessionId"])
+    .index("by_stripe_subscription", ["stripeSubscriptionId"]),
 
   // Trainer slots - individual slot management per date
   trainerSlots: defineTable({

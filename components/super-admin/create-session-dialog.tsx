@@ -71,7 +71,7 @@ export function CreateSessionDialog({
 
   const onSubmit = async (data: SessionFormValues) => {
     try {
-      await createSession({
+      const sessionId = await createSession({
         trainerId,
         name: data.name,
         description: data.description,
@@ -79,6 +79,38 @@ export function CreateSessionDialog({
         duration: data.duration,
         price: data.price,
       });
+
+      // Create Stripe product and price for this session
+      try {
+        const trainer = await fetch(`/api/trainers/${trainerId}`).then((res) =>
+          res.json()
+        );
+
+        await fetch("/api/stripe/create-product", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sessionId,
+            trainerId,
+            sessionName: data.name,
+            description: data.description,
+            sessionsPerWeek: data.sessionsPerWeek,
+            duration: data.duration,
+            price: data.price,
+            trainerName: trainer?.name || "Trainer",
+          }),
+        });
+      } catch (stripeError) {
+        // Log error but don't fail session creation
+        console.error("Failed to create Stripe product:", stripeError);
+        toast({
+          variant: "default",
+          title: "Warning",
+          description: "Session created but Stripe product creation failed. It will be created when user books.",
+        });
+      }
 
       toast({
         variant: "success",

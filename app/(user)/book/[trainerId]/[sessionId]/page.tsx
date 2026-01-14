@@ -44,6 +44,9 @@ export default function BookingPage({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlots, setSelectedSlots] = useState<SelectedSlot[]>([]);
 
+  // Mutations
+  const createBookingWithEmails = useMutation(api.bookings.createWithEmails);
+
   // Fetch data
   const trainer = useQuery(api.trainers.getById, {
     id: trainerId as Id<"trainers">,
@@ -241,9 +244,9 @@ export default function BookingPage({
     setSelectedSlots((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Handle booking submission
+  // Handle booking submission - redirect to Stripe checkout or bypass
   const handleBookSessions = async () => {
-    if (!convexUser || !currentSession) {
+    if (!convexUser || !currentSession || !trainer) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -270,33 +273,72 @@ export default function BookingPage({
       return;
     }
 
+    // Check if Stripe bypass is enabled (for testing)
+    // This reads from NEXT_PUBLIC_BYPASS_STRIPE environment variable
+    const bypassStripe = process.env.NEXT_PUBLIC_BYPASS_STRIPE === "true";
+
     try {
-      await createBooking({
-        userId: convexUser._id,
-        trainerId: trainerId as Id<"trainers">,
-        sessionId: sessionId as Id<"sessions">,
-        slots: selectedSlots.map((slot) => ({
-          date: slot.date,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-        })),
-      });
+      if (bypassStripe) {
+        // BYPASS MODE: Create booking directly without Stripe payment
+        const bookingId = await createBookingWithEmails({
+          userId: convexUser._id,
+          trainerId: trainerId as Id<"trainers">,
+          sessionId: sessionId as Id<"sessions">,
+          slots: selectedSlots.map((slot) => ({
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          })),
+        });
 
-      toast({
-        variant: "success",
-        title: "Booking successful!",
-        description: `Your ${currentSession.sessionsPerWeek} session${currentSession.sessionsPerWeek > 1 ? "s have" : " has"} been booked successfully.`,
-      });
+        // Redirect to confirmation page
+        router.push(`/booking-confirmation?booking_id=${bookingId}&bypass=true`);
+      } else {
+        // NORMAL MODE: Redirect to Stripe checkout for payment
+        const response = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trainerId,
+            sessionId,
+            slots: selectedSlots.map((slot) => ({
+              date: slot.date,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+            })),
+            price: currentSession.price,
+            sessionsPerWeek: currentSession.sessionsPerWeek,
+            duration: currentSession.duration,
+            trainerName: trainer.name,
+            sessionName: currentSession.name,
+          }),
+        });
 
-      router.push("/your-bookings");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to create checkout session");
+        }
+
+        // Redirect to Stripe Checkout
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error("No checkout URL received");
+        }
+      }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Booking failed",
+        title: bypassStripe ? "Booking failed" : "Payment setup failed",
         description:
           error instanceof Error
             ? error.message
-            : "Failed to create booking. Please try again.",
+            : bypassStripe
+            ? "Failed to create booking. Please try again."
+            : "Failed to initiate payment. Please try again.",
       });
     }
   };

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Query to get sessions by trainer ID
@@ -35,6 +35,14 @@ export const getByTrainerIdAndDuration = query({
   },
 });
 
+// Query to get session by ID
+export const getById = query({
+  args: { id: v.id("sessions") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
 // Mutation to create a session
 export const create = mutation({
   args: {
@@ -58,6 +66,12 @@ export const create = mutation({
       throw new Error("Sessions per week must be between 1 and 5");
     }
 
+    // Get trainer info for Stripe product
+    const trainer = await ctx.db.get(args.trainerId);
+    if (!trainer) {
+      throw new Error("Trainer not found");
+    }
+
     const sessionId = await ctx.db.insert("sessions", {
       trainerId: args.trainerId,
       name: args.name,
@@ -70,7 +84,27 @@ export const create = mutation({
       updatedAt: now,
     });
 
+    // Note: Stripe product creation is handled by the frontend after session creation
+    // The create-session-dialog component will call /api/stripe/create-product
+    // This ensures Stripe products are created when sessions are created
+
     return sessionId;
+  },
+});
+
+// Internal mutation to update Stripe IDs after product creation
+export const updateStripeIds = internalMutation({
+  args: {
+    sessionId: v.id("sessions"),
+    stripeProductId: v.string(),
+    stripePriceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, {
+      stripeProductId: args.stripeProductId,
+      stripePriceId: args.stripePriceId,
+      updatedAt: Date.now(),
+    });
   },
 });
 
@@ -83,6 +117,8 @@ export const update = mutation({
     sessionsPerWeek: v.optional(v.number()),
     duration: v.optional(v.number()),
     price: v.optional(v.number()),
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
