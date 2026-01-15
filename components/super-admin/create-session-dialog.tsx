@@ -135,7 +135,10 @@ export function CreateSessionDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button
+          size="sm"
+          className="font-medium bg-white text-black border-0 hover:bg-white/90"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Session
         </Button>

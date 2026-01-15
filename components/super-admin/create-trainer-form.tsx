@@ -165,9 +165,11 @@ export function CreateTrainerForm() {
   }
 
   return (
-    <Card>
+    <Card className="border-2" style={{ borderColor: "#F2D578" }}>
       <CardHeader>
-        <CardTitle>Create New Trainer</CardTitle>
+        <CardTitle className="text-2xl border-b-2 pb-3" style={{ borderColor: "#F2D578", color: "#F2D578" }}>
+          Create New Trainer
+        </CardTitle>
         <CardDescription>
           Add a new trainer to the system with their details and expertise
         </CardDescription>
@@ -181,9 +183,9 @@ export function CreateTrainerForm() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel className="font-bold" style={{ color: "#F2D578" }}>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter trainer name" {...field} />
+                      <Input placeholder="Enter trainer name" {...field} className="border-2" style={{ borderColor: "#F2D578" }} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -195,12 +197,14 @@ export function CreateTrainerForm() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="font-bold" style={{ color: "#F2D578" }}>Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
                         placeholder="Enter email address"
                         {...field}
+                        className="border-2"
+                        style={{ borderColor: "#F2D578" }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -214,12 +218,14 @@ export function CreateTrainerForm() {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone</FormLabel>
+                  <FormLabel className="font-bold" style={{ color: "#F2D578" }}>Phone</FormLabel>
                   <FormControl>
                     <Input
                       type="tel"
                       placeholder="Enter phone number"
                       {...field}
+                      className="border-2"
+                      style={{ borderColor: "#F2D578" }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -229,12 +235,16 @@ export function CreateTrainerForm() {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label>Expertise</Label>
+                <Label style={{ color: "#F2D578" }}>Expertise</Label>
                 <Button
                   type="button"
-                  variant="outline"
                   size="sm"
                   onClick={addExpertise}
+                  className="font-bold"
+                  style={{
+                    backgroundColor: "#F2D578",
+                    color: "#000000",
+                  }}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add
@@ -253,14 +263,20 @@ export function CreateTrainerForm() {
                             <Input
                               placeholder="Enter expertise"
                               {...field}
-                              className="flex-1"
+                              className="flex-1 border-2"
+                              style={{ borderColor: "#F2D578" }}
                             />
                             {expertise.length > 1 && (
                               <Button
                                 type="button"
-                                variant="outline"
                                 size="icon"
                                 onClick={() => removeExpertise(index)}
+                                className="border-2"
+                                style={{
+                                  borderColor: "#F2D578",
+                                  backgroundColor: "transparent",
+                                  color: "#F2D578",
+                                }}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -280,11 +296,12 @@ export function CreateTrainerForm() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className="font-bold" style={{ color: "#F2D578" }}>Description</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Enter trainer description/bio"
-                      className="min-h-[100px]"
+                      className="min-h-[100px] border-2"
+                      style={{ borderColor: "#F2D578" }}
                       {...field}
                     />
                   </FormControl>
@@ -301,12 +318,14 @@ export function CreateTrainerForm() {
               name="profilePicture"
               render={({ field: { value, onChange, ...fieldProps } }) => (
                 <FormItem>
-                  <FormLabel>Profile Picture</FormLabel>
+                  <FormLabel className="font-bold" style={{ color: "#F2D578" }}>Profile Picture</FormLabel>
                   <FormControl>
                     <Input
                       {...fieldProps}
                       type="file"
                       accept="image/*"
+                      className="border-2"
+                      style={{ borderColor: "#F2D578" }}
                       onChange={(event) => {
                         const file = event.target.files?.[0]
                         if (file) {
@@ -329,10 +348,23 @@ export function CreateTrainerForm() {
                 variant="outline"
                 onClick={() => form.reset()}
                 disabled={isSubmitting}
+                className="px-8 py-6 font-bold border-2"
+                style={{
+                  borderColor: "#F2D578",
+                  color: "#F2D578",
+                }}
               >
                 Reset
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-8 py-6 font-bold"
+                style={{
+                  backgroundColor: isSubmitting ? undefined : "#F2D578",
+                  color: isSubmitting ? undefined : "#000000",
+                }}
+              >
                 {isSubmitting ? "Creating..." : "Create Trainer"}
               </Button>
             </div>

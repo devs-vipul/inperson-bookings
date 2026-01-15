@@ -14,6 +14,7 @@ import { TrainerImage } from "@/components/trainer-image";
 import { useToast } from "@/components/ui/use-toast";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import {
   generateTimeSlots,
   isDateAvailable,
@@ -184,6 +185,12 @@ export default function BookingPage({
     // Use local date string to avoid timezone issues
     const dateString = dateToLocalString(date);
     return !isDateAvailable(dateString, availability);
+  };
+
+  // Check if a date has any selected slots
+  const isDateWithSelectedSlots = (date: Date): boolean => {
+    const dateString = dateToLocalString(date);
+    return selectedSlots.some((slot) => slot.date === dateString);
   };
 
   // Handle slot selection
@@ -381,25 +388,53 @@ export default function BookingPage({
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Trainer Info Section */}
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <motion.div
+          className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           {/* Trainer Image & Info */}
-          <Card className="md:col-span-1">
+          <Card
+            className="md:col-span-1 border-2"
+            style={{ borderColor: "#F2D578" }}
+          >
             <CardContent className="p-6">
               <div className="flex flex-col items-center">
-                <TrainerImage
-                  storageId={trainer.profilePicture}
-                  width={200}
-                  height={250}
-                  alt={trainer.name}
-                  className="mb-4 h-[250px] w-[200px] rounded-lg object-cover"
-                />
-                <h2 className="text-xl font-bold">{trainer.name}</h2>
+                <div
+                  className="mb-4 rounded-xl border-4 p-2"
+                  style={{ borderColor: "#F2D578" }}
+                >
+                  <TrainerImage
+                    storageId={trainer.profilePicture}
+                    width={200}
+                    height={250}
+                    alt={trainer.name}
+                    className="h-[250px] w-[200px] rounded-lg object-cover"
+                  />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {trainer.name}
+                </h2>
                 {trainer.expertise && trainer.expertise.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm font-semibold">Expertise</p>
-                    <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                  <div className="mt-4 w-full">
+                    <p
+                      className="text-sm font-bold border-b-2 pb-2 mb-3"
+                      style={{ borderColor: "#F2D578", color: "#F2D578" }}
+                    >
+                      Expertise
+                    </p>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
                       {trainer.expertise.map((exp) => (
-                        <li key={exp}>- {exp}</li>
+                        <li key={exp} className="flex items-start gap-2">
+                          <span
+                            className="font-bold text-lg"
+                            style={{ color: "#F2D578" }}
+                          >
+                            •
+                          </span>
+                          <span>{exp}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -409,25 +444,43 @@ export default function BookingPage({
           </Card>
 
           {/* Trainer Description */}
-          <Card className="md:col-span-2">
+          <Card
+            className="md:col-span-2 border-2"
+            style={{ borderColor: "#F2D578" }}
+          >
             <CardHeader>
-              <CardTitle>Trainer Description</CardTitle>
+              <CardTitle
+                className="text-2xl border-b-2 pb-3"
+                style={{ borderColor: "#F2D578", color: "#F2D578" }}
+              >
+                Trainer Description
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[15px] text-muted-foreground leading-relaxed">
                 {trainer.description ||
                   "No description available for this trainer."}
               </p>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Booking Section */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <motion.div
+          className="grid grid-cols-1 gap-6 lg:grid-cols-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
           {/* Selected Sessions */}
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 border-2" style={{ borderColor: "#F2D578" }}>
             <CardHeader>
-              <CardTitle>Selected Sessions</CardTitle>
+              <CardTitle
+                className="border-b-2 pb-3"
+                style={{ borderColor: "#F2D578", color: "#F2D578" }}
+              >
+                Selected Sessions
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {selectedSlots.length === 0 ? (
@@ -436,17 +489,24 @@ export default function BookingPage({
                   calendar.
                 </p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {selectedSlots.map((slot, index) => (
-                    <div
+                    <motion.div
                       key={index}
-                      className="flex items-center justify-between rounded-lg border p-3"
+                      className="flex items-center justify-between rounded-lg border-2 p-3"
+                      style={{
+                        borderColor: "#F2D578",
+                        backgroundColor: "rgba(242, 213, 120, 0.1)",
+                      }}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.2, delay: index * 0.05 }}
                     >
                       <div>
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-bold text-foreground">
                           {formatDate(new Date(slot.date + "T00:00:00"))}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs font-medium" style={{ color: "#F2D578" }}>
                           {slot.displayStart} - {slot.displayEnd}
                         </p>
                       </div>
@@ -454,15 +514,26 @@ export default function BookingPage({
                         variant="ghost"
                         size="icon"
                         onClick={() => removeSlot(index)}
-                        className="h-8 w-8"
+                        className="h-8 w-8 hover:bg-destructive/10"
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
+                    </motion.div>
                   ))}
-                  {selectedSlots.length === maxSlots && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      All sessions selected
+                  {selectedSlots.length === maxSlots ? (
+                    <p
+                      className="mt-2 text-sm font-bold text-center py-2 rounded-md"
+                      style={{
+                        backgroundColor: "#F2D578",
+                        color: "#000000",
+                      }}
+                    >
+                      All sessions selected ✓
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-center text-muted-foreground">
+                      {maxSlots - selectedSlots.length} session
+                      {maxSlots - selectedSlots.length > 1 ? "s" : ""} left
                     </p>
                   )}
                 </div>
@@ -471,25 +542,38 @@ export default function BookingPage({
           </Card>
 
           {/* Calendar */}
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 border-2" style={{ borderColor: "#F2D578" }}>
             <CardHeader>
-              <CardTitle>Select Dates</CardTitle>
+              <CardTitle
+                className="border-b-2 pb-3"
+                style={{ borderColor: "#F2D578", color: "#F2D578" }}
+              >
+                Select Dates
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 disabled={isDateDisabled}
-                className="rounded-md border"
+                modifiers={{
+                  hasSlots: isDateWithSelectedSlots,
+                }}
+                className="rounded-md w-full"
               />
             </CardContent>
           </Card>
 
           {/* Available Times */}
-          <Card className="lg:col-span-1">
+          <Card className="lg:col-span-1 border-2" style={{ borderColor: "#F2D578" }}>
             <CardHeader>
-              <CardTitle>Available Times</CardTitle>
+              <CardTitle
+                className="border-b-2 pb-3"
+                style={{ borderColor: "#F2D578", color: "#F2D578" }}
+              >
+                Available Times
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {!selectedDate ? (
@@ -501,7 +585,7 @@ export default function BookingPage({
                   No available time slots for this date.
                 </p>
               ) : (
-                <div className="grid max-h-[400px] grid-cols-2 gap-2 overflow-y-auto">
+                <div className="grid max-h-[400px] grid-cols-2 gap-2 overflow-y-auto pr-2">
                   {availableTimeSlots.map((slot, index) => {
                     const dateString = dateToLocalString(selectedDate);
                     const isSelected = selectedSlots.some(
@@ -512,17 +596,30 @@ export default function BookingPage({
                     );
 
                     return (
-                      <Button
+                      <motion.button
                         key={index}
-                        variant={isSelected ? "default" : "outline"}
-                        size="sm"
                         onClick={() => handleSlotSelect(slot)}
                         disabled={slot.isBooked || slot.isDisabled}
                         className={cn(
-                          "text-xs",
+                          "rounded-lg border-2 px-3 py-2 text-xs font-medium transition-all",
                           (slot.isBooked || slot.isDisabled) &&
-                            "cursor-not-allowed opacity-50 hover:bg-muted"
+                            "cursor-not-allowed opacity-50"
                         )}
+                        style={{
+                          borderColor: "#F2D578",
+                          backgroundColor: isSelected ? "#F2D578" : "transparent",
+                          color: isSelected ? "#000000" : "white",
+                        }}
+                        whileHover={
+                          !slot.isBooked && !slot.isDisabled
+                            ? { scale: 1.05 }
+                            : {}
+                        }
+                        whileTap={
+                          !slot.isBooked && !slot.isDisabled
+                            ? { scale: 0.95 }
+                            : {}
+                        }
                         title={
                           slot.isDisabled
                             ? "This slot has been disabled"
@@ -538,27 +635,42 @@ export default function BookingPage({
                         {slot.isBooked && (
                           <span className="ml-1 text-[10px]">(Booked)</span>
                         )}
-                      </Button>
+                      </motion.button>
                     );
                   })}
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Book Button */}
         {selectedSlots.length > 0 && (
-          <div className="mt-6 flex justify-center">
-            <Button
-              onClick={handleBookSessions}
-              size="lg"
-              disabled={selectedSlots.length !== maxSlots}
+          <motion.div
+            className="mt-8 flex justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.98 }}
             >
-              Book {selectedSlots.length} Session
-              {selectedSlots.length > 1 ? "s" : ""}
-            </Button>
-          </div>
+              <Button
+                onClick={handleBookSessions}
+                size="lg"
+                disabled={selectedSlots.length !== maxSlots}
+                className="px-12 py-7 text-lg font-bold rounded-lg shadow-xl"
+                style={{
+                  backgroundColor: selectedSlots.length === maxSlots ? "#F2D578" : undefined,
+                  color: selectedSlots.length === maxSlots ? "#000000" : undefined,
+                }}
+              >
+                Book {selectedSlots.length} Session
+                {selectedSlots.length > 1 ? "s" : ""}
+              </Button>
+            </motion.div>
+          </motion.div>
         )}
       </div>
     </div>

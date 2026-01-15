@@ -7,7 +7,6 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -17,8 +16,9 @@ import {
   dateToLocalString,
   type TimeSlot,
 } from "@/lib/booking-utils";
-import { ChevronLeft, ChevronRight, ArrowLeft, Clock } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 export default function TrainerCalendarPage({
   params,
@@ -311,14 +311,7 @@ export default function TrainerCalendarPage({
     }
   };
 
-  // Calendar modifiers
-  const calendarModifiers = {
-    available: (date: Date) => isDateAvailable(date),
-  };
-
-  const calendarModifiersClassNames = {
-    available: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1.5 after:w-1.5 after:rounded-full after:bg-green-500",
-  };
+  // Calendar modifiers - removed green dot indicator as requested
 
   if (
     trainer === undefined ||
@@ -345,46 +338,64 @@ export default function TrainerCalendarPage({
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-6">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <motion.div
+          className="mb-6 flex items-center justify-between"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="hover:bg-[#F2D578]/20"
+            >
               <Link href={`/super-admin/manage-trainer/trainers/${trainerId}`}>
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">
-                {trainer.name} - Admin Calendar
+              <h1
+                className="text-2xl font-bold"
+                style={{ color: "#F2D578" }}
+              >
+                {trainer.name} - Manage Slots
               </h1>
               <p className="text-sm text-muted-foreground">
                 Manage trainer availability and view booking slots
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Statistics */}
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-          <Card>
+        <motion.div
+          className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card className="border-2" style={{ borderColor: "#F2D578" }}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm font-medium" style={{ color: "#F2D578" }}>
                     Total {selectedDuration}min slots
                   </p>
                   <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
-                <div className="rounded-full bg-primary/10 p-3">
-                  <Clock className="h-5 w-5 text-primary" />
+                <div className="rounded-full p-3" style={{ backgroundColor: "rgba(242, 213, 120, 0.1)" }}>
+                  <Clock className="h-5 w-5" style={{ color: "#F2D578" }} />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-2 border-green-500">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active slots</p>
+                  <p className="text-sm font-medium text-green-500">Active slots</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {stats.active}
                   </p>
@@ -395,11 +406,11 @@ export default function TrainerCalendarPage({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-2 border-red-500">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Inactive slots</p>
+                  <p className="text-sm font-medium text-red-500">Inactive slots</p>
                   <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                     {stats.inactive}
                   </p>
@@ -410,11 +421,11 @@ export default function TrainerCalendarPage({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-2 border-blue-500">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Booked slots</p>
+                  <p className="text-sm font-medium text-blue-500">Booked slots</p>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {stats.booked}
                   </p>
@@ -425,46 +436,25 @@ export default function TrainerCalendarPage({
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
           {/* Calendar */}
-          <Card>
+          <Card className="border-2" style={{ borderColor: "#F2D578" }}>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>
-                  {currentMonth.toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      const newDate = new Date(currentMonth);
-                      newDate.setMonth(newDate.getMonth() - 1);
-                      setCurrentMonth(newDate);
-                    }}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      const newDate = new Date(currentMonth);
-                      newDate.setMonth(newDate.getMonth() + 1);
-                      setCurrentMonth(newDate);
-                    }}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <CardTitle
+                className="border-b-2 pb-3"
+                style={{ borderColor: "#F2D578", color: "#F2D578" }}
+              >
+                Select Date
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -473,62 +463,74 @@ export default function TrainerCalendarPage({
                     setSelectedDate(date);
                   }
                 }}
-                month={currentMonth}
-                onMonthChange={setCurrentMonth}
                 disabled={(date) => !isDateAvailable(date)}
-                modifiers={calendarModifiers}
-                modifiersClassNames={calendarModifiersClassNames}
-                className="rounded-md border"
+                className="rounded-md w-full"
               />
-              <div className="mt-4 flex gap-4 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
-                  <span className="text-muted-foreground">Available Days</span>
-                </div>
-                {selectedDate && (
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full bg-primary" />
-                    <span className="text-muted-foreground">Selected Date</span>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
 
           {/* Slots */}
-          <Card>
+          <Card className="border-2" style={{ borderColor: "#F2D578" }}>
             <CardHeader>
-              <CardTitle>
-                Available Slots -{" "}
-                {selectedDate
-                  ? selectedDate.toLocaleDateString("en-US", {
+              <CardTitle
+                className="border-b-2 pb-3"
+                style={{ borderColor: "#F2D578", color: "#F2D578" }}
+              >
+                Manage Slots
+                {selectedDate && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    - {selectedDate.toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
-                    })
-                  : "Select Date"}
+                    })}
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Duration Tabs */}
-                <Tabs
-                  value={selectedDuration.toString()}
-                  onValueChange={(value) =>
-                    setSelectedDuration(value === "30" ? 30 : 60)
-                  }
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="30">30 Min</TabsTrigger>
-                    <TabsTrigger value="60">60 Min</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                {/* Duration Tabs - Custom Styled */}
+                <div className="border-b-2 pb-4" style={{ borderColor: "#F2D578" }}>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedDuration(30)}
+                      className="flex-1 px-4 py-2 text-sm font-medium rounded-md border-2 transition-all"
+                      style={{
+                        borderColor: "#F2D578",
+                        backgroundColor: selectedDuration === 30 ? "#F2D578" : "black",
+                        color: selectedDuration === 30 ? "black" : "#F2D578",
+                      }}
+                    >
+                      30 Min Sessions
+                    </button>
+                    <button
+                      onClick={() => setSelectedDuration(60)}
+                      className="flex-1 px-4 py-2 text-sm font-medium rounded-md border-2 transition-all"
+                      style={{
+                        borderColor: "#F2D578",
+                        backgroundColor: selectedDuration === 60 ? "#F2D578" : "black",
+                        color: selectedDuration === 60 ? "black" : "#F2D578",
+                      }}
+                    >
+                      60 Min Sessions
+                    </button>
+                  </div>
+                </div>
 
                 {/* All Slots Toggle */}
-                <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3.5">
+                <div
+                  className="flex items-center justify-between rounded-lg border-2 p-4"
+                  style={{
+                    borderColor: "#F2D578",
+                    backgroundColor: "rgba(242, 213, 120, 0.05)",
+                  }}
+                >
                   <div>
-                    <span className="text-sm font-medium">All Slots Active</span>
-                    <p className="text-xs text-muted-foreground">
+                    <span className="text-sm font-bold" style={{ color: "#F2D578" }}>
+                      Toggle All Slots
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-1">
                       {allSlotsActive
                         ? "All slots are enabled for this date"
                         : `${stats.inactive} slot${stats.inactive !== 1 ? "s" : ""} disabled`}
@@ -543,60 +545,58 @@ export default function TrainerCalendarPage({
 
                 {/* Slots List */}
                 {!selectedDate ? (
-                  <div className="flex items-center justify-center py-12">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex items-center justify-center py-12 border-2 border-dashed rounded-lg" style={{ borderColor: "#F2D578" }}>
+                    <p className="text-sm font-medium" style={{ color: "#F2D578" }}>
                       Select a date from the calendar to view slots.
                     </p>
                   </div>
                 ) : displayedSlots.length === 0 ? (
-                  <div className="flex items-center justify-center py-12">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex items-center justify-center py-12 border-2 border-dashed rounded-lg" style={{ borderColor: "#F2D578" }}>
+                    <p className="text-sm font-medium text-muted-foreground">
                       No slots available for this date.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
                     {displayedSlots.map((slot, index) => (
-                      <div
+                      <motion.div
                         key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
                         className={cn(
-                          "group flex items-center justify-between rounded-lg border p-4 transition-all",
+                          "group flex items-center justify-between rounded-lg border-2 p-4 transition-all",
                           slot.isBooked
-                            ? "opacity-60 bg-muted/30 border-muted cursor-not-allowed"
+                            ? "opacity-70 bg-blue-500/5 border-blue-500 cursor-not-allowed"
                             : slot.isActive
-                              ? "bg-background border-border hover:shadow-md"
-                              : "opacity-60 bg-muted/50 border-muted"
+                              ? "bg-green-500/5 border-green-500 hover:shadow-lg hover:scale-[1.02]"
+                              : "opacity-70 bg-red-500/5 border-red-500"
                         )}
                       >
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold">
                               {slot.displayStart} - {slot.displayEnd}
-                              {slot.isBooked && (
-                                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                                  (Booked)
-                                </span>
-                              )}
                             </p>
                             {!slot.isBooked && (
                               <span
                                 className={cn(
-                                  "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                                  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border-2",
                                   slot.isActive
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                    ? "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500"
+                                    : "bg-red-500/20 text-red-600 dark:text-red-400 border-red-500"
                                 )}
                               >
                                 {slot.isActive ? "Active" : "Inactive"}
                               </span>
                             )}
                             {slot.isBooked && (
-                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                              <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border-2 bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500">
                                 Booked
                               </span>
                             )}
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="mt-1 text-xs font-medium text-muted-foreground">
                             Duration: {selectedDuration} minutes
                           </p>
                         </div>
@@ -608,14 +608,14 @@ export default function TrainerCalendarPage({
                           disabled={slot.isBooked}
                           className="ml-4"
                         />
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

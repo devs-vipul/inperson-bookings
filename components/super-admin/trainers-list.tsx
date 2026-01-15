@@ -57,9 +57,11 @@ export function TrainersList() {
 
   if (trainers === undefined) {
     return (
-      <Card>
+      <Card className="border-2" style={{ borderColor: "#F2D578" }}>
         <CardHeader>
-          <CardTitle>All Trainers</CardTitle>
+          <CardTitle className="text-2xl border-b-2 pb-3" style={{ borderColor: "#F2D578", color: "#F2D578" }}>
+            All Trainers
+          </CardTitle>
           <CardDescription>
             View and manage all trainers in the system
           </CardDescription>
@@ -73,9 +75,11 @@ export function TrainersList() {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="border-2" style={{ borderColor: "#F2D578" }}>
         <CardHeader>
-          <CardTitle>All Trainers</CardTitle>
+          <CardTitle className="text-2xl border-b-2 pb-3" style={{ borderColor: "#F2D578", color: "#F2D578" }}>
+            All Trainers
+          </CardTitle>
           <CardDescription>
             View and manage all trainers in the system
           </CardDescription>
@@ -89,29 +93,30 @@ export function TrainersList() {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-semibold">S.No</th>
-                    <th className="text-left p-4 font-semibold">
+                  <tr className="border-b-2" style={{ borderColor: "#F2D578" }}>
+                    <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>S.No</th>
+                    <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>
                       Trainer Name
                     </th>
-                    <th className="text-left p-4 font-semibold">Email</th>
-                    <th className="text-left p-4 font-semibold">Phone</th>
-                    <th className="text-left p-4 font-semibold">
+                    <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>Email</th>
+                    <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>Phone</th>
+                    <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>
                       Available Days
                     </th>
-                    <th className="text-left p-4 font-semibold">Status</th>
+                    <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {trainers.map((trainer, index) => (
                     <tr
                       key={trainer._id}
-                      className="border-b hover:bg-muted/50"
+                      className="border-b hover:bg-muted/50 transition-all"
+                      style={{ borderColor: "rgba(242, 213, 120, 0.2)" }}
                     >
-                      <td className="p-4">
+                      <td className="p-4 font-medium">
                         {String(index + 1).padStart(2, "0")}
                       </td>
-                      <td className="p-4 font-medium">{trainer.name}</td>
+                      <td className="p-4 font-bold text-foreground">{trainer.name}</td>
                       <td className="p-4 text-muted-foreground">
                         {trainer.email}
                       </td>
@@ -126,7 +131,12 @@ export function TrainersList() {
                               (day: string, dayIndex: number) => (
                                 <span
                                   key={dayIndex}
-                                  className="inline-flex items-center rounded-md bg-primary/10 text-primary px-2 py-1 text-xs font-medium"
+                                  className="inline-flex items-center rounded-md px-2 py-1 text-xs font-bold"
+                                  style={{
+                                    backgroundColor: "rgba(242, 213, 120, 0.2)",
+                                    color: "#F2D578",
+                                    border: "1px solid #F2D578",
+                                  }}
                                 >
                                   {day}
                                 </span>
@@ -153,10 +163,16 @@ export function TrainersList() {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent
+                              align="end"
+                              className="bg-black border-2"
+                              style={{ borderColor: "#F2D578" }}
+                            >
                               <DropdownMenuItem asChild>
                                 <Link
                                   href={`/super-admin/manage-trainer/trainers/${trainer._id}`}
+                                  className="cursor-pointer font-medium"
+                                  style={{ color: "#F2D578" }}
                                 >
                                   View Details
                                 </Link>

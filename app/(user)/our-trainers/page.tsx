@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
 import { TrainerImage } from "@/components/trainer-image";
+import { motion } from "framer-motion";
 
 type Trainer = Doc<"trainers">;
 
@@ -14,13 +13,12 @@ export default function OurTrainersPage() {
   const trainers = useQuery(api.trainers.getActiveTrainers) as
     | Trainer[]
     | undefined;
-  const [visibleTrainerId, setVisibleTrainerId] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Top Banner Section */}
       <section className="relative h-80 lg:h-[468px]">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20"></div>
+        <div className="absolute inset-0 bg-linear-to-br from-primary/20 to-secondary/20"></div>
         <div className="absolute inset-0 z-10 bg-background/50"></div>
         <div className="absolute inset-0 z-30 flex w-full flex-col items-center justify-center px-2 md:px-5 lg:px-0">
           <h2 className="max-w-5xl text-balance text-center text-3xl font-bold tracking-wide text-foreground md:text-4xl lg:text-5xl">
@@ -58,68 +56,60 @@ export default function OurTrainersPage() {
             </div>
           ) : (
             <div className="no-scrollbar mt-14 flex gap-10 overflow-x-auto px-5 lg:grid lg:grid-cols-4 lg:px-0">
-              {trainers.map((trainer) => {
+              {trainers.map((trainer, index) => {
                 return (
-                  <div key={trainer._id} className="relative w-fit shrink-0">
-                    {/* Image container with group hover */}
-                    <div className="group relative">
-                      <TrainerImage
-                        storageId={trainer.profilePicture}
-                        alt={trainer.name || "Trainer"}
-                        width={271}
-                        height={370}
-                        className="h-[321px] w-[234px] object-cover lg:h-[370px] lg:w-[271px]"
-                      />
-                      {/* Overlay that appears on hover */}
-                      <div
-                        className={`absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-500 ${
-                          visibleTrainerId === trainer._id
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-100"
-                        }`}
-                      >
-                        <div className="flex h-full flex-col items-start justify-center p-5">
-                          {visibleTrainerId === trainer._id && (
-                            <button
-                              onClick={() => setVisibleTrainerId(null)}
-                              className="absolute right-2 top-2 text-foreground"
-                            >
-                              ✕
-                            </button>
-                          )}
-                          <h3 className="mb-1 text-[20px] font-bold text-foreground">
-                            Expertise
-                          </h3>
-                          {trainer.expertise?.map((ex: string, i: number) => (
-                            <li
-                              key={i}
-                              className="list-none text-[12px] font-bold text-foreground"
-                            >
-                              - {ex}
-                            </li>
-                          ))}
-                          <div className="block w-full">
-                            <Link href={`/our-trainers/${trainer._id}`}>
-                              <Button className="mt-5 w-full text-[15px] font-bold">
-                                Book Appointment
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
+                  <Link key={trainer._id} href={`/our-trainers/${trainer._id}`}>
+                    <motion.div
+                      className="relative w-[271px] h-[450px] overflow-hidden group rounded-xl shadow-lg shrink-0 cursor-pointer"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      whileHover={{ y: -8, transition: { duration: 0.3 } }}
+                    >
+                      {/* Image */}
+                      <div className="w-full h-full">
+                        <TrainerImage
+                          storageId={trainer.profilePicture}
+                          alt={trainer.name || "Trainer"}
+                          width={271}
+                          height={450}
+                          className="h-full w-full object-cover scale-105 group-hover:scale-100 transition-all duration-300"
+                        />
                       </div>
-                    </div>
 
-                    {/* Trainer name div - separate from hover effect */}
-                    <div className="absolute bottom-0 left-0 flex w-full flex-col items-start rounded-b-lg bg-primary p-2 text-primary-foreground lg:p-1">
-                      <p className="text-xl font-bold">{trainer.name}</p>
-                      <button
-                        onClick={() => setVisibleTrainerId(trainer._id)}
-                        className="cursor-pointer text-[12px] font-bold hover:no-underline"
+                      {/* Hover Overlay with Expertise */}
+                      <article
+                        className="p-8 w-full h-full overflow-hidden z-10 absolute top-0 flex flex-col justify-end rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300"
+                        style={{ backgroundColor: "rgb(242, 213, 120)" }}
                       >
-                        - View Expertise
-                      </button>
-                    </div>
-                  </div>
+                        <div className="translate-y-10 group-hover:translate-y-0 transition-all duration-300 space-y-4">
+                          <h1 className="text-2xl font-bold text-black">
+                            Expertise
+                          </h1>
+                          <ul className="space-y-2 max-h-[240px] overflow-y-auto">
+                            {trainer.expertise?.map((ex: string, i: number) => (
+                              <li
+                                key={i}
+                                className="text-sm font-medium text-black/80"
+                              >
+                                • {ex}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </article>
+
+                      {/* Bottom Name Section (visible by default, hidden on hover) */}
+                      <article className="p-4 w-full h-[20%] flex flex-col justify-end overflow-hidden absolute bottom-0 rounded-b-xl bg-linear-to-t from-black/80 to-transparent opacity-100 group-hover:opacity-0 group-hover:-bottom-4 transition-all duration-300">
+                        <h1 className="text-xl font-bold text-white drop-shadow-lg">
+                          {trainer.name}
+                        </h1>
+                        <p className="text-sm text-white/90">
+                          Personal Trainer
+                        </p>
+                      </article>
+                    </motion.div>
+                  </Link>
                 );
               })}
             </div>
