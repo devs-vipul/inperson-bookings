@@ -1,15 +1,33 @@
 "use client";
 
 import { use, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { TrainerImage } from "@/components/trainer-image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pencil, Plus, Eye, Archive, Calendar, Edit } from "lucide-react";
+import {
+  Pencil,
+  Plus,
+  Eye,
+  Archive,
+  Calendar,
+  Edit,
+  MoreVertical,
+} from "lucide-react";
 import { CreateSessionDialog } from "@/components/super-admin/create-session-dialog";
 import { EditAvailabilityDialog } from "@/components/super-admin/edit-availability-dialog";
+import { PauseSubscriptionDialog } from "@/components/super-admin/pause-subscription-dialog";
+import { CancelSubscriptionAlert } from "@/components/super-admin/cancel-subscription-alert";
+import { EditResumeDateDialog } from "@/components/super-admin/edit-resume-date-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +42,12 @@ export default function TrainerDetailPage({
   const [isAvailabilityDialogOpen, setIsAvailabilityDialogOpen] =
     useState(false);
   const [activeSessionTab, setActiveSessionTab] = useState<"30" | "60">("30");
+  const [selectedSubscription, setSelectedSubscription] = useState<any | null>(
+    null
+  );
+  const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
+  const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
+  const [isEditResumeDateOpen, setIsEditResumeDateOpen] = useState(false);
 
   const trainer = useQuery(api.trainers.getById, {
     id: trainerId as Id<"trainers">,
@@ -34,14 +58,20 @@ export default function TrainerDetailPage({
   const availability = useQuery(api.availability.getByTrainerId, {
     trainerId: trainerId as Id<"trainers">,
   });
+  const subscriptions = useQuery(api.subscriptions.getByTrainerId, {
+    trainerId: trainerId as Id<"trainers">,
+  });
 
   const toggleSlot = useMutation(api.availability.toggleSlot);
+  const resumeSubscription = useMutation(api.subscriptions.resume);
+  const resumeInStripe = useAction(api.subscriptions.resumeInStripe);
   const { toast } = useToast();
 
   if (
     trainer === undefined ||
     sessions === undefined ||
-    availability === undefined
+    availability === undefined ||
+    subscriptions === undefined
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -60,6 +90,55 @@ export default function TrainerDetailPage({
 
   const sessions30Min = sessions?.filter((s) => s.duration === 30) || [];
   const sessions60Min = sessions?.filter((s) => s.duration === 60) || [];
+
+  const handleResumeInstantly = async (subscription: any) => {
+    try {
+      // First resume in Stripe
+      await resumeInStripe({
+        stripeSubscriptionId: subscription.stripeSubscriptionId,
+      });
+
+      // Then update our database
+      await resumeSubscription({ subscriptionId: subscription._id });
+
+      toast({
+        title: "Success",
+        description: "Subscription resumed instantly",
+      });
+    } catch (error) {
+      console.error("Error resuming subscription:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to resume subscription",
+      });
+    }
+  };
+
+  const formatDate = (dateInput: number | string) => {
+    const date =
+      typeof dateInput === "string" ? new Date(dateInput) : new Date(dateInput);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return { bg: "#22c55e", text: "#000000" };
+      case "paused":
+        return { bg: "#eab308", text: "#000000" };
+      case "past_due":
+        return { bg: "#f97316", text: "#ffffff" };
+      case "cancelled":
+        return { bg: "#ef4444", text: "#ffffff" };
+      default:
+        return { bg: "#6b7280", text: "#ffffff" };
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -477,6 +556,254 @@ export default function TrainerDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {/* Booked Sessions Section */}
+      <Card className="border-2 bg-black" style={{ borderColor: "#F2D578" }}>
+        <CardContent className="p-6">
+          <h3
+            className="text-xl font-bold mb-4"
+            style={{ color: "#F2D578", borderBottom: "2px solid #F2D578" }}
+          >
+            Booked Sessions
+          </h3>
+
+          {subscriptions && subscriptions.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2" style={{ borderColor: "#F2D578" }}>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      User
+                    </th>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Email
+                    </th>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Package
+                    </th>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Sessions/Week
+                    </th>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Period Start
+                    </th>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Period End
+                    </th>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Status
+                    </th>
+                    <th
+                      className="text-left py-3 px-4 font-bold text-sm"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subscriptions.map((subscription: any, idx: number) => {
+                    const statusColor = getStatusBadgeColor(
+                      subscription.status
+                    );
+                    return (
+                      <motion.tr
+                        key={subscription._id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2, delay: idx * 0.05 }}
+                        className="border-b border-white/10 hover:bg-white/5"
+                      >
+                        <td className="py-3 px-4 text-sm text-white">
+                          {subscription.user?.name || "N/A"}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-white">
+                          {subscription.user?.email || "N/A"}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-white">
+                          <div>
+                            <p className="font-medium">
+                              {subscription.session?.name || "N/A"}
+                            </p>
+                            <p className="text-xs text-white/50">
+                              {subscription.session?.duration} min
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-white">
+                          {subscription.sessionsPerWeek}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-white">
+                          {formatDate(subscription.currentPeriodStart)}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-white">
+                          <div>
+                            <p>{formatDate(subscription.currentPeriodEnd)}</p>
+                            {subscription.status === "paused" &&
+                              subscription.resumeDate && (
+                                <p className="text-xs text-yellow-400 mt-1">
+                                  Resume:{" "}
+                                  {new Date(
+                                    subscription.resumeDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}
+                                </p>
+                              )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge
+                            className="text-xs font-bold"
+                            style={{
+                              backgroundColor: statusColor.bg,
+                              color: statusColor.text,
+                            }}
+                          >
+                            {subscription.status.toUpperCase()}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-white/10"
+                              >
+                                <MoreVertical
+                                  className="h-4 w-4"
+                                  style={{ color: "#F2D578" }}
+                                />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-64 bg-black border-2"
+                              style={{ borderColor: "#F2D578" }}
+                            >
+                              {subscription.status === "active" && (
+                                <DropdownMenuItem
+                                  className="text-white hover:bg-white/10 cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedSubscription(subscription);
+                                    setIsPauseDialogOpen(true);
+                                  }}
+                                >
+                                  <span style={{ color: "#F2D578" }}>▐▐</span>
+                                  <span className="ml-2">
+                                    Pause Subscription
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
+
+                              {subscription.status === "paused" && (
+                                <>
+                                  <DropdownMenuItem
+                                    className="text-white hover:bg-white/10 cursor-pointer"
+                                    onClick={() =>
+                                      handleResumeInstantly(subscription)
+                                    }
+                                  >
+                                    <span style={{ color: "#F2D578" }}>▶</span>
+                                    <span className="ml-2">
+                                      Resume Subscription Instantly
+                                    </span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-white hover:bg-white/10 cursor-pointer"
+                                    onClick={() => {
+                                      setSelectedSubscription(subscription);
+                                      setIsEditResumeDateOpen(true);
+                                    }}
+                                  >
+                                    <span style={{ color: "#F2D578" }}>✎</span>
+                                    <span className="ml-2">
+                                      Edit Resume Date
+                                    </span>
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {(subscription.status === "active" ||
+                                subscription.status === "paused") && (
+                                <DropdownMenuItem
+                                  className="text-red-500 hover:bg-red-500/10 cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedSubscription(subscription);
+                                    setIsCancelAlertOpen(true);
+                                  }}
+                                >
+                                  <span>✕</span>
+                                  <span className="ml-2">
+                                    Cancel Subscription
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No booked sessions yet.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialogs */}
+      {selectedSubscription && (
+        <>
+          <PauseSubscriptionDialog
+            subscriptionId={selectedSubscription._id}
+            stripeSubscriptionId={selectedSubscription.stripeSubscriptionId}
+            open={isPauseDialogOpen}
+            onOpenChange={setIsPauseDialogOpen}
+          />
+          <CancelSubscriptionAlert
+            subscriptionId={selectedSubscription._id}
+            stripeSubscriptionId={selectedSubscription.stripeSubscriptionId}
+            open={isCancelAlertOpen}
+            onOpenChange={setIsCancelAlertOpen}
+          />
+          <EditResumeDateDialog
+            subscriptionId={selectedSubscription._id}
+            stripeSubscriptionId={selectedSubscription.stripeSubscriptionId}
+            currentResumeDate={selectedSubscription.resumeDate}
+            open={isEditResumeDateOpen}
+            onOpenChange={setIsEditResumeDateOpen}
+          />
+        </>
+      )}
     </div>
   );
 }

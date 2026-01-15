@@ -71,6 +71,8 @@ export default defineSchema({
     userId: v.id("users"), // User who made the booking
     trainerId: v.id("trainers"),
     sessionId: v.id("sessions"), // Session package booked
+    subscriptionId: v.optional(v.id("subscriptions")), // Link to subscription if part of subscription
+    isAdvancedBooking: v.optional(v.boolean()), // false = initial, true = advanced booking
     slots: v.array(
       v.object({
         date: v.string(), // Date in "YYYY-MM-DD" format
@@ -92,9 +94,35 @@ export default defineSchema({
     .index("by_user_id", ["userId"])
     .index("by_trainer_id", ["trainerId"])
     .index("by_session_id", ["sessionId"])
+    .index("by_subscription_id", ["subscriptionId"])
     .index("by_user_status", ["userId", "status"])
     .index("by_stripe_session", ["stripeCheckoutSessionId"])
     .index("by_stripe_subscription", ["stripeSubscriptionId"]),
+
+  // Subscriptions table - tracks active recurring subscriptions
+  subscriptions: defineTable({
+    userId: v.id("users"),
+    trainerId: v.id("trainers"),
+    sessionId: v.id("sessions"),
+    stripeSubscriptionId: v.string(), // Stripe subscription ID
+    stripeCustomerId: v.string(), // Stripe customer ID
+    status: v.string(), // "active", "past_due", "paused", "cancelled", "expired"
+    currentPeriodStart: v.string(), // ISO date string
+    currentPeriodEnd: v.string(), // ISO date string
+    sessionsPerWeek: v.number(),
+    resumeDate: v.optional(v.string()), // ISO date string - for paused subscriptions
+    cancelledAt: v.optional(v.number()),
+    cancelReason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_id", ["userId"])
+    .index("by_trainer_id", ["trainerId"])
+    .index("by_session_id", ["sessionId"])
+    .index("by_stripe_subscription", ["stripeSubscriptionId"])
+    .index("by_user_trainer_session", ["userId", "trainerId", "sessionId"])
+    .index("by_status", ["status"])
+    .index("by_resume_date_status", ["resumeDate", "status"]),
 
   // Trainer slots - individual slot management per date
   trainerSlots: defineTable({

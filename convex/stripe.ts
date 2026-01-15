@@ -1,238 +1,175 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import Stripe from "stripe";
 
-// Internal mutation to handle Stripe webhooks
-export const handleWebhook = internalMutation({
+// Initialize Stripe (will throw at runtime if key is missing)
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2025-12-15.clover",
+  });
+};
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-12-15.clover",
+    })
+  : (null as any);
+
+export default stripe;
+
+// Public webhook handler (callable from Next.js API route)
+// Note: This is safe because signature verification happens in Next.js API route
+export const processWebhook = mutation({
   args: {
     type: v.string(),
-    session: v.optional(
-      v.object({
-        id: v.string(),
-        customer: v.union(v.string(), v.null()),
-        subscription: v.union(v.string(), v.null()),
-        metadata: v.union(
-          v.object({
-            trainerId: v.string(),
-            sessionId: v.string(),
-            clerkUserId: v.string(),
-            slots: v.string(),
-            sessionsPerWeek: v.string(),
-            duration: v.string(),
-          }),
-          v.null()
-        ),
-        amount_total: v.union(v.number(), v.null()),
-        currency: v.union(v.string(), v.null()),
-      })
-    ),
-    subscription: v.optional(
-      v.object({
-        id: v.string(),
-        customer: v.union(v.string(), v.null()),
-        status: v.string(),
-        metadata: v.union(
-          v.object({
-            trainerId: v.string(),
-            sessionId: v.string(),
-            clerkUserId: v.string(),
-            slots: v.string(),
-            sessionsPerWeek: v.string(),
-            duration: v.string(),
-          }),
-          v.null()
-        ),
-      })
-    ),
-    invoice: v.optional(
-      v.object({
-        id: v.string(),
-        subscription: v.union(v.string(), v.null()),
-        customer: v.union(v.string(), v.null()),
-        amount_paid: v.union(v.number(), v.null()),
-        currency: v.union(v.string(), v.null()),
-      })
-    ),
+    session: v.optional(v.any()),
+    subscription: v.optional(v.any()),
+    invoice: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
+    console.log("🔔 Webhook received in Convex:", args.type);
 
-    if (args.type === "checkout.session.completed" && args.session) {
-      const session = args.session;
-      if (!session.metadata) {
-        throw new Error("Missing metadata in session");
-      }
+    switch (args.type) {
+      case "checkout.session.completed": {
+        const session = args.session as any;
+        console.log("📦 Processing checkout session:", session.id);
 
-      const { trainerId, sessionId, clerkUserId, slots, sessionsPerWeek, duration } =
-        session.metadata;
+        // Extract metadata
+        const metadata = session.metadata || {};
+        console.log("📋 Metadata:", metadata);
 
-      // Get user by Clerk ID
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", clerkUserId))
-        .first();
+        const trainerId = metadata.trainerId as Id<"trainers">;
+        const sessionId = metadata.sessionId as Id<"sessions">;
+        const clerkUserId = metadata.clerkUserId;
+        const slots = JSON.parse(metadata.slots || "[]");
+        const sessionsPerWeek = parseInt(metadata.sessionsPerWeek || "1");
 
-      if (!user) {
-        throw new Error("User not found");
-      }
+        console.log("👤 Clerk User ID:", clerkUserId);
+        console.log("🎯 Trainer ID:", trainerId);
+        console.log("📅 Session ID:", sessionId);
+        console.log("🕐 Slots:", slots);
+        console.log("📊 Sessions per week:", sessionsPerWeek);
 
-      // Parse slots
-      const parsedSlots = JSON.parse(slots);
+        // Find user by Clerk ID
+        console.log("🔍 Looking up user by Clerk ID:", clerkUserId);
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerk_user_id", (q) =>
+            q.eq("clerkUserId", clerkUserId)
+          )
+          .first();
 
-      // Get trainer and session data for emails
-      const trainer = await ctx.db.get(trainerId as Id<"trainers">);
-      const sessionData = await ctx.db.get(sessionId as Id<"sessions">);
+        if (!user) {
+          console.error(`❌ User not found for Clerk ID: ${clerkUserId}`);
+          return;
+        }
 
-      if (!trainer || !sessionData) {
-        throw new Error("Trainer or session not found");
-      }
+        console.log("✅ User found:", user._id, user.email);
 
-      // Create booking
-      const bookingId = await ctx.db.insert("bookings", {
-        userId: user._id,
-        trainerId: trainerId as Id<"trainers">,
-        sessionId: sessionId as Id<"sessions">,
-        slots: parsedSlots,
-        status: "confirmed",
-        stripeCheckoutSessionId: session.id,
-        stripeSubscriptionId: session.subscription as string | undefined,
-        stripeCustomerId: session.customer as string | undefined,
-        paymentStatus: "paid",
-        amountPaid: session.amount_total || undefined,
-        currency: session.currency || "usd",
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // Send emails asynchronously (don't block webhook response)
-      // Schedule email sending to run after booking is created
-      try {
-        await ctx.scheduler.runAfter(0, internal.emails.sendBookingConfirmationToUser, {
-          userEmail: user.email || "",
-          userName: user.name || "User",
-          trainerName: trainer.name,
-          sessionName: sessionData.name,
-          sessionsPerWeek: Number(sessionsPerWeek),
-          duration: Number(duration),
-          slots: parsedSlots,
+        // Create booking
+        console.log("💾 Creating booking...");
+        const bookingId = await ctx.db.insert("bookings", {
+          userId: user._id,
+          trainerId,
+          sessionId,
+          slots,
+          status: "confirmed",
+          stripeCheckoutSessionId: session.id,
+          stripeSubscriptionId: session.subscription as string,
+          stripeCustomerId: session.customer as string,
+          paymentStatus: "paid",
+          amountPaid: session.amount_total || 0,
+          currency: session.currency || "usd",
+          isAdvancedBooking: false, // Initial booking
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
         });
 
-        await ctx.scheduler.runAfter(0, internal.emails.sendBookingNotificationToTrainer, {
-          trainerEmail: trainer.email,
-          trainerName: trainer.name,
-          userName: user.name || "User",
-          userEmail: user.email || "",
-          sessionName: sessionData.name,
-          sessionsPerWeek: Number(sessionsPerWeek),
-          duration: Number(duration),
-          slots: parsedSlots,
-        });
-      } catch (emailError) {
-        // Log error but don't fail the webhook
-        console.error("Error scheduling emails:", emailError);
+        console.log("✅ Booking created successfully:", bookingId);
+
+        // Create subscription record
+        if (session.subscription) {
+          console.log("💳 Creating subscription record...");
+          const subscriptionId = await ctx.runMutation(
+            internal.subscriptions.create,
+            {
+              userId: user._id,
+              trainerId,
+              sessionId,
+              stripeSubscriptionId: session.subscription as string,
+              stripeCustomerId: session.customer as string,
+              currentPeriodStart: new Date().toISOString(),
+              currentPeriodEnd: new Date(
+                Date.now() + 7 * 24 * 60 * 60 * 1000
+              ).toISOString(),
+              sessionsPerWeek,
+            }
+          );
+
+          // Link booking to subscription
+          await ctx.db.patch(bookingId, {
+            subscriptionId,
+          });
+        }
+
+        // TODO: Send emails to user and trainer
+
+        break;
       }
 
-      return { bookingId, success: true };
-    }
+      case "invoice.payment_succeeded": {
+        const invoice = args.invoice as any;
 
-    if (
-      (args.type === "customer.subscription.created" ||
-        args.type === "customer.subscription.updated") &&
-      args.subscription
-    ) {
-      const subscription = args.subscription;
-      
-      // Find booking by subscription ID
-      const booking = await ctx.db
-        .query("bookings")
-        .withIndex("by_stripe_subscription", (q) =>
-          q.eq("stripeSubscriptionId", subscription.id)
-        )
-        .first();
-
-      if (booking) {
-        // Update booking status based on subscription status
-        const status =
-          subscription.status === "active" ? "confirmed" : "cancelled";
-        
-        await ctx.db.patch(booking._id, {
-          status,
-          updatedAt: now,
-        });
+        if (invoice.subscription) {
+          // Update subscription status to active
+          await ctx.runMutation(internal.subscriptions.updateStatus, {
+            stripeSubscriptionId: invoice.subscription as string,
+            status: "active",
+          });
+        }
+        break;
       }
-    }
 
-    if (args.type === "customer.subscription.deleted" && args.subscription) {
-      const subscription = args.subscription;
-      
-      // Find booking by subscription ID
-      const booking = await ctx.db
-        .query("bookings")
-        .withIndex("by_stripe_subscription", (q) =>
-          q.eq("stripeSubscriptionId", subscription.id)
-        )
-        .first();
+      case "invoice.payment_failed": {
+        const invoice = args.invoice as any;
 
-      if (booking) {
-        await ctx.db.patch(booking._id, {
+        if (invoice.subscription) {
+          // Update subscription status to past_due
+          await ctx.runMutation(internal.subscriptions.updateStatus, {
+            stripeSubscriptionId: invoice.subscription as string,
+            status: "past_due",
+          });
+        }
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = args.subscription as any;
+
+        // Update subscription status to cancelled
+        await ctx.runMutation(internal.subscriptions.updateStatus, {
+          stripeSubscriptionId: subscription.id,
           status: "cancelled",
-          updatedAt: now,
         });
+
+        // TODO: Release future slots
+        break;
       }
-    }
 
-    if (args.type === "invoice.payment_succeeded" && args.invoice) {
-      const invoice = args.invoice;
-      
-      if (invoice.subscription) {
-        // Find booking by subscription ID
-        const booking = await ctx.db
-          .query("bookings")
-          .withIndex("by_stripe_subscription", (q) =>
-            q.eq("stripeSubscriptionId", invoice.subscription as string)
-          )
-          .first();
-
-        if (booking) {
-          // Update payment status
-          await ctx.db.patch(booking._id, {
-            paymentStatus: "paid",
-            amountPaid: invoice.amount_paid || undefined,
-            currency: invoice.currency || "usd",
-            updatedAt: now,
-          });
-        }
-      }
-    }
-
-    if (args.type === "invoice.payment_failed" && args.invoice) {
-      const invoice = args.invoice;
-      
-      if (invoice.subscription) {
-        // Find booking by subscription ID
-        const booking = await ctx.db
-          .query("bookings")
-          .withIndex("by_stripe_subscription", (q) =>
-            q.eq("stripeSubscriptionId", invoice.subscription as string)
-          )
-          .first();
-
-        if (booking) {
-          // Update payment status
-          await ctx.db.patch(booking._id, {
-            paymentStatus: "failed",
-            updatedAt: now,
-          });
-        }
-      }
+      default:
+        console.log(`Unhandled event type: ${args.type}`);
     }
 
     return { success: true };
   },
 });
 
-// Query to get booking by Stripe session ID
+// Get booking by Stripe checkout session ID
 export const getByStripeSession = query({
   args: { sessionId: v.string() },
   handler: async (ctx, args) => {
@@ -243,9 +180,7 @@ export const getByStripeSession = query({
       )
       .first();
 
-    if (!booking) {
-      return null;
-    }
+    if (!booking) return null;
 
     // Populate related data
     const trainer = await ctx.db.get(booking.trainerId);

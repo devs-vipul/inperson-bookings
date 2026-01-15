@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { headers } from "next/headers";
 import Stripe from "stripe";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 if (!webhookSecret) {
   throw new Error("STRIPE_WEBHOOK_SECRET is not set");
 }
+
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
+const convexClient = new ConvexHttpClient(convexUrl);
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -37,31 +42,31 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        
-        // Call Convex HTTP action to handle webhook
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-        if (convexUrl) {
-          const response = await fetch(`${convexUrl}/api/stripe/webhook`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+
+        console.log("🎉 Checkout session completed:", session.id);
+        console.log("📧 Customer:", session.customer);
+        console.log("💳 Subscription:", session.subscription);
+        console.log("📦 Metadata:", session.metadata);
+
+        // Call Convex mutation directly
+        try {
+          console.log("📡 Calling Convex mutation directly...");
+
+          await convexClient.mutation(api.stripe.processWebhook, {
+            type: "checkout.session.completed",
+            session: {
+              id: session.id,
+              customer: session.customer,
+              subscription: session.subscription,
+              metadata: session.metadata,
+              amount_total: session.amount_total,
+              currency: session.currency,
             },
-            body: JSON.stringify({
-              type: "checkout.session.completed",
-              session: {
-                id: session.id,
-                customer: session.customer,
-                subscription: session.subscription,
-                metadata: session.metadata,
-                amount_total: session.amount_total,
-                currency: session.currency,
-              },
-            }),
           });
 
-          if (!response.ok) {
-            console.error("Failed to process webhook in Convex");
-          }
+          console.log("✅ Convex webhook processed successfully!");
+        } catch (error) {
+          console.error("❌ Failed to process webhook in Convex:", error);
         }
         break;
       }
@@ -69,95 +74,84 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-        
-        if (convexUrl) {
-          await fetch(`${convexUrl}/api/stripe/webhook`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+
+        try {
+          await convexClient.mutation(api.stripe.processWebhook, {
+            type: event.type,
+            subscription: {
+              id: subscription.id,
+              customer: subscription.customer,
+              status: subscription.status,
+              metadata: subscription.metadata,
             },
-            body: JSON.stringify({
-              type: event.type,
-              subscription: {
-                id: subscription.id,
-                customer: subscription.customer,
-                status: subscription.status,
-                metadata: subscription.metadata,
-              },
-            }),
           });
+        } catch (error) {
+          console.error("❌ Failed to process subscription webhook:", error);
         }
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-        
-        if (convexUrl) {
-          await fetch(`${convexUrl}/api/stripe/webhook`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+
+        try {
+          await convexClient.mutation(api.stripe.processWebhook, {
+            type: "customer.subscription.deleted",
+            subscription: {
+              id: subscription.id,
+              customer: subscription.customer,
+              metadata: subscription.metadata,
             },
-            body: JSON.stringify({
-              type: "customer.subscription.deleted",
-              subscription: {
-                id: subscription.id,
-                customer: subscription.customer,
-                metadata: subscription.metadata,
-              },
-            }),
           });
+        } catch (error) {
+          console.error(
+            "❌ Failed to process subscription deleted webhook:",
+            error
+          );
         }
         break;
       }
 
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-        
-        if (convexUrl) {
-          await fetch(`${convexUrl}/api/stripe/webhook`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+
+        try {
+          await convexClient.mutation(api.stripe.processWebhook, {
+            type: "invoice.payment_succeeded",
+            invoice: {
+              id: invoice.id,
+              subscription: invoice.subscription,
+              customer: invoice.customer,
+              amount_paid: invoice.amount_paid,
+              currency: invoice.currency,
             },
-            body: JSON.stringify({
-              type: "invoice.payment_succeeded",
-              invoice: {
-                id: invoice.id,
-                subscription: invoice.subscription,
-                customer: invoice.customer,
-                amount_paid: invoice.amount_paid,
-                currency: invoice.currency,
-              },
-            }),
           });
+        } catch (error) {
+          console.error(
+            "❌ Failed to process invoice payment succeeded webhook:",
+            error
+          );
         }
         break;
       }
 
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-        
-        if (convexUrl) {
-          await fetch(`${convexUrl}/api/stripe/webhook`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
+
+        try {
+          await convexClient.mutation(api.stripe.processWebhook, {
+            type: "invoice.payment_failed",
+            invoice: {
+              id: invoice.id,
+              subscription: invoice.subscription,
+              customer: invoice.customer,
             },
-            body: JSON.stringify({
-              type: "invoice.payment_failed",
-              invoice: {
-                id: invoice.id,
-                subscription: invoice.subscription,
-                customer: invoice.customer,
-              },
-            }),
           });
+        } catch (error) {
+          console.error(
+            "❌ Failed to process invoice payment failed webhook:",
+            error
+          );
         }
         break;
       }
