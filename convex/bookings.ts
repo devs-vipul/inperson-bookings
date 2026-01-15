@@ -33,10 +33,26 @@ export const getByUserId = query({
 export const getByTrainerId = query({
   args: { trainerId: v.id("trainers") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const bookings = await ctx.db
       .query("bookings")
       .withIndex("by_trainer_id", (q) => q.eq("trainerId", args.trainerId))
       .collect();
+    
+    // Populate user data for each booking
+    return await Promise.all(
+      bookings.map(async (booking) => {
+        const user = await ctx.db.get(booking.userId);
+        const session = await ctx.db.get(booking.sessionId);
+        const trainer = await ctx.db.get(booking.trainerId);
+        
+        return {
+          ...booking,
+          user,
+          session,
+          trainer,
+        };
+      })
+    );
   },
 });
 

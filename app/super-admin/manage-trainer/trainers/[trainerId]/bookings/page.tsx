@@ -142,7 +142,6 @@ export default function TrainerBookingsPage({
                 </thead>
                 <tbody>
                   {displayBookings.map((booking, index) => {
-                    const user = booking.userId; // You'll need to fetch user details
                     return booking.slots.map((slot, slotIndex) => (
                       <tr
                         key={`${booking._id}-${slotIndex}`}
@@ -153,12 +152,10 @@ export default function TrainerBookingsPage({
                           {String(index + 1).padStart(2, "0")}
                         </td>
                         <td className="p-4 font-bold text-foreground">
-                          {/* User name - you'll need to add user query */}
-                          User {index + 1}
+                          {booking.user?.name || "N/A"}
                         </td>
                         <td className="p-4 text-muted-foreground">
-                          {/* User email */}
-                          user@example.com
+                          {booking.user?.email || "N/A"}
                         </td>
                         <td className="p-4 text-muted-foreground">
                           {format(new Date(slot.date), "MMM dd, yyyy")}
@@ -175,7 +172,7 @@ export default function TrainerBookingsPage({
                               border: "1px solid #F2D578",
                             }}
                           >
-                            {booking.sessionId ? "30 min" : "60 min"}
+                            {booking.session?.duration || "30"} min
                           </span>
                         </td>
                         <td className="p-4">

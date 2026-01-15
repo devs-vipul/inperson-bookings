@@ -66,7 +66,7 @@ hasActiveSubscription = bookings.find(
 - ✅ No payment required
 - ✅ Booking created immediately
 - ✅ All slots properly registered in database
-- ✅ User can see all bookings in "Your Bookings" page
+- ✅ User can see all bookings in "My Bookings" page
 
 ### 4. Subscription Cancelled
 
@@ -142,7 +142,7 @@ if (hasActiveSubscription) {
 - ✅ User has active subscription
 - ✅ User books 4 sessions from Thursday (different week)
 - ✅ Booking created immediately (no payment)
-- ✅ Both bookings visible in "Your Bookings"
+- ✅ Both bookings visible in "My Bookings"
 
 ### Test Case 3: Mixed Days
 

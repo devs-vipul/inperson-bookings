@@ -10,6 +10,7 @@ import { CheckCircle2, Calendar, Clock, User, CreditCard } from "lucide-react";
 import { formatDate, formatTime12Hour } from "@/lib/booking-utils";
 import Link from "next/link";
 import { TrainerImage } from "@/components/trainer-image";
+import { motion } from "framer-motion";
 
 export default function BookingConfirmationPage() {
   const searchParams = useSearchParams();
@@ -34,10 +35,18 @@ export default function BookingConfirmationPage() {
   if (!sessionId && !bookingId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <p className="text-destructive">Invalid booking reference</p>
-            <Button asChild className="mt-4">
+        <Card className="w-full max-w-md border-2" style={{ borderColor: "#F2D578" }}>
+          <CardContent className="p-8 text-center">
+            <p className="text-destructive font-bold text-lg mb-4">Invalid booking reference</p>
+            <Button
+              asChild
+              className="px-6 py-4 font-bold rounded-lg border-2"
+              style={{
+                backgroundColor: "#F2D578",
+                color: "black",
+                borderColor: "#F2D578",
+              }}
+            >
               <Link href="/our-trainers">Go to Trainers</Link>
             </Button>
           </CardContent>
@@ -49,7 +58,7 @@ export default function BookingConfirmationPage() {
   if (booking === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground font-medium text-lg">Loading...</p>
       </div>
     );
   }
@@ -57,10 +66,18 @@ export default function BookingConfirmationPage() {
   if (!booking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <p className="text-destructive">Booking not found</p>
-            <Button asChild className="mt-4">
+        <Card className="w-full max-w-md border-2" style={{ borderColor: "#F2D578" }}>
+          <CardContent className="p-8 text-center">
+            <p className="text-destructive font-bold text-lg mb-4">Booking not found</p>
+            <Button
+              asChild
+              className="px-6 py-4 font-bold rounded-lg border-2"
+              style={{
+                backgroundColor: "#F2D578",
+                color: "black",
+                borderColor: "#F2D578",
+              }}
+            >
               <Link href="/our-trainers">Go to Trainers</Link>
             </Button>
           </CardContent>
@@ -80,84 +97,125 @@ export default function BookingConfirmationPage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-12">
         {/* Success Header */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 flex justify-center">
-            <div className="rounded-full bg-green-100 p-4 dark:bg-green-900/20">
-              <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+        <motion.div
+          className="mb-8 text-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div
+            className="mb-4 flex justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.2, type: "spring", stiffness: 200 }}
+          >
+            <div
+              className="rounded-full p-6 border-4"
+              style={{
+                backgroundColor: "rgba(242, 213, 120, 0.1)",
+                borderColor: "#F2D578",
+              }}
+            >
+              <CheckCircle2 className="h-16 w-16" style={{ color: "#F2D578" }} />
             </div>
-          </div>
-          <h1 className="mb-2 text-3xl font-bold">Booking Confirmed!</h1>
-          <p className="text-muted-foreground">
+          </motion.div>
+          <h1 className="mb-2 text-4xl font-bold" style={{ color: "#F2D578" }}>
+            Booking Confirmed!
+          </h1>
+          <p className="text-muted-foreground font-medium text-lg">
             Your training sessions have been successfully booked.
             {bypass && (
-              <span className="block mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+              <span className="block mt-2 text-sm font-bold" style={{ color: "#F2D578" }}>
                 (Test Mode - Payment Bypassed)
               </span>
             )}
           </p>
-        </div>
+        </motion.div>
 
         {/* Booking Details Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Booking Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Trainer Info */}
-            <div className="flex items-start gap-4">
-              {trainer?.profilePicture && (
-                <TrainerImage
-                  storageId={trainer.profilePicture}
-                  width={80}
-                  height={80}
-                  alt={trainer.name}
-                  className="h-20 w-20 rounded-lg object-cover"
-                />
-              )}
-              <div className="flex-1">
-                <div className="mb-1 flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">{trainer?.name}</h3>
-                </div>
-                {trainer?.expertise && trainer.expertise.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    {trainer.expertise.join(", ")}
-                  </p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card className="mb-6 border-2" style={{ borderColor: "#F2D578" }}>
+            <CardHeader className="border-b-2" style={{ borderColor: "#F2D578" }}>
+              <CardTitle style={{ color: "#F2D578" }}>Booking Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              {/* Trainer Info */}
+              <div className="flex items-start gap-4">
+                {trainer?.profilePicture && (
+                  <div className="border-4 rounded-xl p-1" style={{ borderColor: "#F2D578" }}>
+                    <TrainerImage
+                      storageId={trainer.profilePicture}
+                      width={80}
+                      height={80}
+                      alt={trainer.name}
+                      className="h-20 w-20 rounded-lg object-cover"
+                    />
+                  </div>
                 )}
+                <div className="flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <User className="h-5 w-5" style={{ color: "#F2D578" }} />
+                    <h3 className="text-lg font-bold">{trainer?.name}</h3>
+                  </div>
+                  {trainer?.expertise && trainer.expertise.length > 0 && (
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {trainer.expertise.join(", ")}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
 
             {/* Session Info */}
             {session && (
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <h4 className="mb-2 font-semibold">{session.name}</h4>
+              <div
+                className="rounded-lg border-2 p-4"
+                style={{
+                  borderColor: "#F2D578",
+                  backgroundColor: "rgba(242, 213, 120, 0.05)",
+                }}
+              >
+                <h4 className="mb-3 font-bold text-lg" style={{ color: "#F2D578" }}>
+                  {session.name}
+                </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Sessions per week</p>
-                    <p className="font-medium">{session.sessionsPerWeek}</p>
+                    <p className="text-muted-foreground font-medium">Sessions per week</p>
+                    <p className="font-bold text-lg">{session.sessionsPerWeek}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Duration</p>
-                    <p className="font-medium">{session.duration} minutes</p>
+                    <p className="text-muted-foreground font-medium">Duration</p>
+                    <p className="font-bold text-lg">{session.duration} minutes</p>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Payment Info */}
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-                <h4 className="font-semibold">Payment</h4>
+            <div
+              className="rounded-lg border-2 p-4"
+              style={{
+                borderColor: "#F2D578",
+                backgroundColor: "rgba(242, 213, 120, 0.05)",
+              }}
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <CreditCard className="h-5 w-5" style={{ color: "#F2D578" }} />
+                <h4 className="font-bold text-lg" style={{ color: "#F2D578" }}>
+                  Payment
+                </h4>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount Paid</span>
-                <span className="font-semibold">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground font-medium">Amount Paid</span>
+                <span className="font-bold text-xl" style={{ color: "#F2D578" }}>
                   ${totalAmount} {booking.currency?.toUpperCase()}
                 </span>
               </div>
               {booking.stripeSubscriptionId && (
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-xs font-medium" style={{ color: "#F2D578" }}>
                   Recurring weekly payment enabled
                 </p>
               )}
@@ -165,49 +223,81 @@ export default function BookingConfirmationPage() {
 
             {/* Booked Slots */}
             <div>
-              <div className="mb-3 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <h4 className="font-semibold">Booked Sessions</h4>
+              <div className="mb-4 flex items-center gap-2 border-b-2 pb-2" style={{ borderColor: "#F2D578" }}>
+                <Calendar className="h-5 w-5" style={{ color: "#F2D578" }} />
+                <h4 className="font-bold text-lg" style={{ color: "#F2D578" }}>
+                  Booked Sessions
+                </h4>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {slots.map((slot, index) => (
-                  <div
+                  <motion.div
                     key={index}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
+                    className="flex items-center justify-between rounded-lg border-2 p-4 hover:shadow-md transition-all"
+                    style={{
+                      borderColor: "#F2D578",
+                      backgroundColor: "rgba(242, 213, 120, 0.05)",
+                    }}
                   >
                     <div>
-                      <p className="font-medium">
+                      <p className="font-bold text-lg">
                         {formatDate(new Date(slot.date + "T00:00:00"))}
                       </p>
-                      <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
+                      <div className="mt-2 flex items-center gap-2 text-sm font-medium">
+                        <Clock className="h-4 w-4" style={{ color: "#F2D578" }} />
                         <span>
                           {formatTime12Hour(slot.startTime)} -{" "}
                           {formatTime12Hour(slot.endTime)}
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href="/your-bookings">View My Bookings</Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full sm:w-auto"
-            onClick={() => router.push("/our-trainers")}
-          >
-            Book Another Session
-          </Button>
-        </div>
+        <motion.div
+          className="flex flex-col gap-4 sm:flex-row sm:justify-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+        >
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              asChild
+              size="lg"
+              className="w-full sm:w-auto px-8 py-6 font-bold text-lg rounded-lg border-2"
+              style={{
+                backgroundColor: "#F2D578",
+                color: "black",
+                borderColor: "#F2D578",
+              }}
+            >
+              <Link href="/your-bookings">View My Bookings</Link>
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              size="lg"
+              className="w-full sm:w-auto px-8 py-6 font-bold text-lg rounded-lg border-2"
+              style={{
+                backgroundColor: "black",
+                color: "#F2D578",
+                borderColor: "#F2D578",
+              }}
+              onClick={() => router.push("/our-trainers")}
+            >
+              Book Another Session
+            </Button>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

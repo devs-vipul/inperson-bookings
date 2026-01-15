@@ -26,7 +26,7 @@ export function UserNavbar() {
             <SignedIn>
               <Link href="/your-bookings">
                 <Button variant="ghost" className="hover:bg-primary/10 hover:text-primary">
-                  Your Bookings
+                  My Bookings
                 </Button>
               </Link>
               <UserButton afterSignOutUrl="/" />
