@@ -152,11 +152,12 @@ export function ColumnTimePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-0"
+        className="w-auto p-0 bg-black border-2"
+        style={{ borderColor: "#F2D578" }}
         align="start"
         onWheel={(e) => e.stopPropagation()}
       >
-        <div className="flex border rounded-md overflow-hidden">
+        <div className="flex border-2 rounded-md overflow-hidden" style={{ borderColor: "#F2D578" }}>
           {/* Hours Column */}
           <div
             ref={hoursRef}

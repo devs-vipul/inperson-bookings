@@ -199,7 +199,7 @@ export function CreateSessionDialog({
                         <SelectValue placeholder="Select sessions per week" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-black border-2" style={{ borderColor: "#F2D578" }}>
                       <SelectItem value="1">1 session/week</SelectItem>
                       <SelectItem value="2">2 sessions/week</SelectItem>
                       <SelectItem value="3">3 sessions/week</SelectItem>
@@ -227,7 +227,7 @@ export function CreateSessionDialog({
                         <SelectValue placeholder="Select session duration" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-black border-2" style={{ borderColor: "#F2D578" }}>
                       <SelectItem value="30">30 minutes</SelectItem>
                       <SelectItem value="60">60 minutes</SelectItem>
                     </SelectContent>

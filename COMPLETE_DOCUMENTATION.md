@@ -311,12 +311,35 @@ The Advanced Booking System allows users with **active subscriptions** to book t
 
 #### 4. Visual Indicators
 
-- **Subscription Badge** (🔄 Subscription): Shows on booking cards
+- **Subscription Badge** (🔄 Sub): Shows on booking cards and admin tables
+  - **What it means**: This booking was made using an active subscription (advanced booking)
+  - **Where it appears**:
+    - User's "My Bookings" page
+    - Admin's "View Bookings" page for trainers
+  - **Color**: Purple badge with 🔄 icon
+  - **Important**: This badge is **permanent** - it marks that the booking was made without payment using an existing subscription
 - **Status Colors**:
-  - Green: Active subscription
-  - Red: Payment issue (past_due)
-  - Purple: Subscription booking badge
-  - Yellow: Regular booking (no subscription)
+  - Green: Active subscription / Confirmed booking
+  - Red: Payment issue (past_due) / Cancelled booking
+  - Purple: Subscription booking badge (🔄 Sub)
+  - Yellow: Regular booking elements (borders, highlights)
+
+#### 5. Advanced Booking Badge Behavior
+
+**Q: Will the "🔄 Sub" badge disappear when the next Stripe payment succeeds?**
+
+**A: No, the badge is permanent.** Here's why:
+
+- **Initial Booking (Jan 20)**: User pays via Stripe → Subscription created → **No badge** (this was a paid booking)
+- **Advanced Booking (Jan 27)**: User books using active subscription → **🔄 Sub badge appears** (this was NOT paid, used existing subscription)
+- **Next Payment (Jan 27)**: Stripe charges for next week → Subscription status updated to "active" → **Badge remains** (it's a historical marker)
+
+The badge indicates **how the booking was created**, not the current subscription status. It helps admins distinguish:
+
+- **Initial paid bookings**: Required Stripe payment
+- **Advanced bookings**: No payment required, covered by subscription
+
+**All bookings remain valid when payment succeeds** - the subscription just continues into the next period, allowing more advanced bookings to be made.
 
 ### User Flow Examples
 
@@ -380,6 +403,41 @@ Stripe automatically retries failed payments:
 | **During Retries**   | `past_due`          | ✅ Preserved                               | ❌ Blocked   | ⚠️ Warning shown      |
 | **Payment Success**  | `active`            | ✅ Preserved                               | ✅ Allowed   | ✅ Normal             |
 | **All Retries Fail** | `cancelled`         | Past: ✅ Preserved<br>Future: ❌ Cancelled | ❌ Blocked   | 🚫 Subscription ended |
+
+#### What Happens to Advanced Bookings When Payment Succeeds?
+
+**All advanced bookings remain valid and unchanged.** Here's the complete flow:
+
+**Week 1 (Jan 20):**
+
+- User books 3 sessions and pays $X via Stripe
+- Subscription created with status `active`
+- Bookings created with `isAdvancedBooking: false` (initial paid booking)
+- No "🔄 Sub" badge
+
+**Week 2 (Jan 27):**
+
+- User returns and books 3 more sessions
+- System detects active subscription
+- Bookings created with `isAdvancedBooking: true` (no payment required)
+- "🔄 Sub" badge appears (permanent marker)
+
+**Payment Day (Jan 27 - Stripe processes weekly payment):**
+
+1. Stripe charges $X for Week 2
+2. Webhook `invoice.payment_succeeded` fires
+3. Subscription status updated to `active` (was already active)
+4. `currentPeriodStart` and `currentPeriodEnd` updated to new dates
+5. **Advanced bookings remain unchanged** - they keep the "🔄 Sub" badge
+6. User can now book for Week 3 (Feb 3) as new advanced bookings
+
+**Important Points:**
+
+- ✅ Advanced bookings are **permanent** once created
+- ✅ Payment success **enables new advanced bookings** for the next period
+- ✅ The "🔄 Sub" badge **never disappears** - it's a historical marker
+- ✅ All bookings (paid and advanced) are **equally valid**
+- ✅ The only difference is **how they were created** (with/without payment)
 
 ### Technical Implementation
 

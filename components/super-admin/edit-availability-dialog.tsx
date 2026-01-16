@@ -279,7 +279,7 @@ export function EditAvailabilityDialog({
                     <SelectTrigger>
                       <SelectValue placeholder="Select day" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-black border-2" style={{ borderColor: "#F2D578" }}>
                       {DAYS.map((day) => {
                         // Show all days, but disable if already selected in another section
                         const isSelectedElsewhere =
