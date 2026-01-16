@@ -68,6 +68,7 @@ export default function TrainerDetailPage({
   const [deletingSessionId, setDeletingSessionId] =
     useState<Id<"sessions"> | null>(null);
   const [isArchiveTrainerOpen, setIsArchiveTrainerOpen] = useState(false);
+  const [resumingSubscriptionId, setResumingSubscriptionId] = useState<Id<"subscriptions"> | null>(null);
 
   const trainer = useQuery(api.trainers.getById, {
     id: trainerId as Id<"trainers">,
@@ -119,6 +120,7 @@ export default function TrainerDetailPage({
   const sessions60Min = sessions?.filter((s) => s.duration === 60) || [];
 
   const handleResumeInstantly = async (subscription: any) => {
+    setResumingSubscriptionId(subscription._id);
     try {
       // First resume in Stripe
       await resumeInStripe({
@@ -139,10 +141,13 @@ export default function TrainerDetailPage({
         title: "Error",
         description: "Failed to resume subscription",
       });
+    } finally {
+      setResumingSubscriptionId(null);
     }
   };
 
   const handleArchiveSession = async (sessionId: Id<"sessions">) => {
+    setArchivingSessionId(sessionId);
     try {
       await archiveSession({ id: sessionId });
       toast({
@@ -157,10 +162,12 @@ export default function TrainerDetailPage({
         title: "Error",
         description: "Failed to archive session",
       });
+      setArchivingSessionId(null);
     }
   };
 
   const handleUnarchiveSession = async (sessionId: Id<"sessions">) => {
+    setArchivingSessionId(sessionId);
     try {
       await unarchiveSession({ id: sessionId });
       toast({
@@ -174,10 +181,13 @@ export default function TrainerDetailPage({
         title: "Error",
         description: "Failed to unarchive session",
       });
+    } finally {
+      setArchivingSessionId(null);
     }
   };
 
   const handleDeleteSession = async (sessionId: Id<"sessions">) => {
+    setDeletingSessionId(sessionId);
     try {
       await deleteSession({ id: sessionId });
       toast({
@@ -192,6 +202,7 @@ export default function TrainerDetailPage({
         title: "Error",
         description: "Failed to delete session",
       });
+      setDeletingSessionId(null);
     }
   };
 
@@ -817,9 +828,10 @@ export default function TrainerDetailPage({
                                 onClick={() =>
                                   handleUnarchiveSession(session._id)
                                 }
+                                disabled={archivingSessionId === session._id}
                               >
                                 <Archive className="h-3 w-3 mr-2" />
-                                Unarchive
+                                {archivingSessionId === session._id ? "Unarchiving..." : "Unarchive"}
                               </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -1049,10 +1061,11 @@ export default function TrainerDetailPage({
                                     onClick={() =>
                                       handleResumeInstantly(subscription)
                                     }
+                                    disabled={resumingSubscriptionId === subscription._id}
                                   >
                                     <span style={{ color: "#F2D578" }}>▶</span>
                                     <span className="ml-2">
-                                      Resume Subscription Instantly
+                                      {resumingSubscriptionId === subscription._id ? "Resuming..." : "Resume Subscription Instantly"}
                                     </span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem

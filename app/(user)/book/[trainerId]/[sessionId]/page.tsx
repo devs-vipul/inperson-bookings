@@ -44,6 +44,7 @@ export default function BookingPage({
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlots, setSelectedSlots] = useState<SelectedSlot[]>([]);
+  const [isBooking, setIsBooking] = useState(false);
 
   // Mutations
   const createBookingWithEmails = useMutation(api.bookings.createWithEmails);
@@ -297,6 +298,7 @@ export default function BookingPage({
     // This reads from NEXT_PUBLIC_BYPASS_STRIPE environment variable
     const bypassStripe = process.env.NEXT_PUBLIC_BYPASS_STRIPE === "true";
 
+    setIsBooking(true);
     try {
       // ADVANCED BOOKING MODE: If user has active subscription, book without payment
       if (activeSubscription && activeSubscription.status === "active") {
@@ -395,6 +397,7 @@ export default function BookingPage({
         }
       }
     } catch (error) {
+      setIsBooking(false);
       toast({
         variant: "destructive",
         title: bypassStripe ? "Booking failed" : "Payment setup failed",
@@ -808,14 +811,14 @@ export default function BookingPage({
               <Button
                 onClick={handleBookSessions}
                 size="lg"
-                disabled={selectedSlots.length !== maxSlots}
+                disabled={selectedSlots.length !== maxSlots || isBooking}
                 className="px-12 py-7 text-lg font-bold rounded-lg shadow-xl"
                 style={{
-                  backgroundColor: selectedSlots.length === maxSlots ? "#F2D578" : undefined,
-                  color: selectedSlots.length === maxSlots ? "#000000" : undefined,
+                  backgroundColor: selectedSlots.length === maxSlots && !isBooking ? "#F2D578" : undefined,
+                  color: selectedSlots.length === maxSlots && !isBooking ? "#000000" : undefined,
                 }}
               >
-                {activeSubscription ? "Book with Subscription" : `Book ${selectedSlots.length} Session${selectedSlots.length > 1 ? "s" : ""}`}
+                {isBooking ? "Booking..." : activeSubscription ? "Book with Subscription" : `Book ${selectedSlots.length} Session${selectedSlots.length > 1 ? "s" : ""}`}
               </Button>
             </motion.div>
           </motion.div>

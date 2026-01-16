@@ -362,7 +362,7 @@ function BookingConfirmationContent() {
                 borderColor: "#F2D578",
               }}
             >
-              <Link href="/my-bookings">View My Bookings</Link>
+              <Link href="/your-bookings">View My Bookings</Link>
             </Button>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>

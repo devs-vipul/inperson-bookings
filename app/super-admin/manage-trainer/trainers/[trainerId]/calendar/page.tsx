@@ -35,6 +35,8 @@ export default function TrainerCalendarPage({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAllSlots, setShowAllSlots] = useState(true); // For filtering display
   const [selectedDuration, setSelectedDuration] = useState<30 | 60>(30);
+  const [togglingSlotId, setTogglingSlotId] = useState<string | null>(null);
+  const [isTogglingAll, setIsTogglingAll] = useState(false);
 
   // Fetch data
   const trainer = useQuery(api.trainers.getById, {
@@ -234,6 +236,8 @@ export default function TrainerCalendarPage({
   ) => {
     if (!selectedDate || slot.isBooked) return;
 
+    const slotId = `${slot.startTime}-${slot.endTime}-${selectedDuration}`;
+    setTogglingSlotId(slotId);
     try {
       await toggleSlot({
         trainerId: trainerId as Id<"trainers">,
@@ -258,6 +262,8 @@ export default function TrainerCalendarPage({
             ? error.message
             : "Failed to update slot status.",
       });
+    } finally {
+      setTogglingSlotId(null);
     }
   };
 
@@ -265,6 +271,7 @@ export default function TrainerCalendarPage({
   const handleToggleAllSlots = async (isActive: boolean) => {
     if (!selectedDate || generatedSlots.length === 0) return;
 
+    setIsTogglingAll(true);
     try {
       const dateString = dateToLocalString(selectedDate);
       
@@ -308,6 +315,8 @@ export default function TrainerCalendarPage({
             ? error.message
             : "Failed to update all slots.",
       });
+    } finally {
+      setIsTogglingAll(false);
     }
   };
 
@@ -539,7 +548,7 @@ export default function TrainerCalendarPage({
                   <Switch
                     checked={allSlotsActive}
                     onCheckedChange={handleToggleAllSlots}
-                    disabled={!selectedDate || generatedSlots.length === 0}
+                    disabled={!selectedDate || generatedSlots.length === 0 || isTogglingAll}
                   />
                 </div>
 
@@ -605,7 +614,7 @@ export default function TrainerCalendarPage({
                           onCheckedChange={(checked) =>
                             handleSlotToggle(slot, checked)
                           }
-                          disabled={slot.isBooked}
+                          disabled={slot.isBooked || togglingSlotId === `${slot.startTime}-${slot.endTime}-${selectedDuration}`}
                           className="ml-4"
                         />
                       </motion.div>
