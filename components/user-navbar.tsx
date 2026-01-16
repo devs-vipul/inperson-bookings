@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
 import Image from "next/image";
 
 export function UserNavbar() {
@@ -29,7 +30,7 @@ export function UserNavbar() {
                   My Bookings
                 </Button>
               </Link>
-              <UserButton afterSignOutUrl="/" />
+              <UserMenu />
             </SignedIn>
             <SignedOut>
               <Link href="/sign-in">
