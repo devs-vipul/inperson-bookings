@@ -125,7 +125,7 @@ export default function BookingPage({
 
     // Check all bookings for conflicts
     for (const booking of existingBookings) {
-      // Only check confirmed bookings (ignore cancelled)
+      // Only check confirmed bookings (ignore cancelled and paused)
       if (booking.status !== "confirmed") continue;
 
       for (const slot of booking.slots) {

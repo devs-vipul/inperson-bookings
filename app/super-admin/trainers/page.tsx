@@ -5,7 +5,9 @@ import { CreateTrainerForm } from "@/components/super-admin/create-trainer-form"
 import { TrainersList } from "@/components/super-admin/trainers-list";
 
 export default function TrainersPage() {
-  const [activeTab, setActiveTab] = useState<"create" | "list">("create");
+  const [activeTab, setActiveTab] = useState<"create" | "list" | "archived">(
+    "create"
+  );
 
   return (
     <div className="space-y-6">
@@ -24,7 +26,7 @@ export default function TrainersPage() {
       {/* Custom Tabs */}
       <div className="space-y-6">
         <div
-          className="w-full md:w-fit grid grid-cols-2 border-b-2"
+          className="w-full md:w-fit grid grid-cols-3 border-b-2"
           style={{ borderColor: "#F2D578" }}
         >
           <button
@@ -32,6 +34,7 @@ export default function TrainersPage() {
             style={{
               backgroundColor: activeTab === "create" ? "#F2D578" : "#000000",
               color: activeTab === "create" ? "#000000" : "#F2D578",
+              border: "2px solid #F2D578",
             }}
             className="py-3 px-6 text-base font-bold transition-all"
           >
@@ -48,6 +51,17 @@ export default function TrainersPage() {
           >
             Trainers
           </button>
+          <button
+            onClick={() => setActiveTab("archived")}
+            style={{
+              backgroundColor: activeTab === "archived" ? "#F2D578" : "#000000",
+              color: activeTab === "archived" ? "#000000" : "#F2D578",
+              border: "2px solid #F2D578",
+            }}
+            className="py-3 px-6 text-base font-bold transition-all"
+          >
+            Archived Trainers
+          </button>
         </div>
 
         {activeTab === "create" && (
@@ -59,6 +73,12 @@ export default function TrainersPage() {
         {activeTab === "list" && (
           <div className="space-y-4">
             <TrainersList />
+          </div>
+        )}
+
+        {activeTab === "archived" && (
+          <div className="space-y-4">
+            <TrainersList archived={true} />
           </div>
         )}
       </div>

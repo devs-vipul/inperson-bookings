@@ -24,12 +24,14 @@ export default defineSchema({
     profilePicture: v.optional(v.id("_storage")), // Storage ID for the image
     availableDays: v.optional(v.array(v.string())), // ["MON", "TUE", etc.]
     status: v.boolean(), // active/inactive
+    isArchived: v.optional(v.boolean()), // archived status
     createdBy: v.optional(v.id("users")), // Super admin who created this
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_email", ["email"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_archived", ["isArchived"]),
 
   // Sessions table - training session packages
   sessions: defineTable({
@@ -80,7 +82,7 @@ export default defineSchema({
         endTime: v.string(), // Time in "HH:MM" format (24-hour)
       })
     ),
-    status: v.string(), // "pending", "confirmed", "cancelled", "completed"
+    status: v.string(), // "pending", "confirmed", "paused", "cancelled", "completed"
     // Stripe payment fields
     stripeCheckoutSessionId: v.optional(v.string()), // Stripe Checkout Session ID
     stripeSubscriptionId: v.optional(v.string()), // Stripe Subscription ID for recurring payments

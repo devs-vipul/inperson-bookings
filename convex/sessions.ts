@@ -39,7 +39,12 @@ export const getByTrainerIdAndDuration = query({
 export const getById = query({
   args: { id: v.id("sessions") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const session = await ctx.db.get(args.id);
+    // Return null if session is archived (users shouldn't see archived sessions)
+    if (session && session.isArchived) {
+      return null;
+    }
+    return session;
   },
 });
 

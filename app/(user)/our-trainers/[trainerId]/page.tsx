@@ -32,7 +32,7 @@ export default function TrainerDetailPage({
     );
   }
 
-  if (trainer === null || !trainer.status) {
+  if (trainer === null || !trainer.status || trainer.isArchived) {
     notFound();
   }
 

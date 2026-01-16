@@ -2,23 +2,25 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-// Query to get all trainers
+// Query to get all trainers (excluding archived)
 export const getAll = query({
   handler: async (ctx) => {
-    const trainers = await ctx.db.query("trainers").order("desc").collect();
-    return trainers;
+    const allTrainers = await ctx.db.query("trainers").order("desc").collect();
+    // Filter out archived trainers
+    return allTrainers.filter((trainer) => !trainer.isArchived);
   },
 });
 
 // Query to get only active trainers (for public display)
 export const getActiveTrainers = query({
   handler: async (ctx) => {
-    const trainers = await ctx.db
+    const allTrainers = await ctx.db
       .query("trainers")
       .withIndex("by_status", (q) => q.eq("status", true))
       .order("desc")
       .collect();
-    return trainers;
+    // Filter out archived trainers
+    return allTrainers.filter((trainer) => !trainer.isArchived);
   },
 });
 
@@ -26,7 +28,12 @@ export const getActiveTrainers = query({
 export const getById = query({
   args: { id: v.id("trainers") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const trainer = await ctx.db.get(args.id);
+    // Return null if trainer is archived (users shouldn't see archived trainers)
+    if (trainer && trainer.isArchived) {
+      return null;
+    }
+    return trainer;
   },
 });
 
@@ -64,6 +71,7 @@ export const create = mutation({
       profilePicture: args.profilePicture,
       availableDays: args.availableDays || [],
       status: true, // Default to active
+      isArchived: false, // Default to not archived
       createdBy: args.createdBy,
       createdAt: now,
       updatedAt: now,
@@ -128,6 +136,53 @@ export const update = mutation({
 
     await ctx.db.patch(id, {
       ...updates,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Query to get archived trainers
+export const getArchived = query({
+  handler: async (ctx) => {
+    const allTrainers = await ctx.db.query("trainers").order("desc").collect();
+    // Return only archived trainers
+    return allTrainers.filter((trainer) => trainer.isArchived === true);
+  },
+});
+
+// Mutation to archive a trainer
+export const archive = mutation({
+  args: { id: v.id("trainers") },
+  handler: async (ctx, args) => {
+    const trainer = await ctx.db.get(args.id);
+    if (!trainer) {
+      throw new Error("Trainer not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      isArchived: true,
+      status: false, // Also set status to inactive
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Mutation to unarchive a trainer
+export const unarchive = mutation({
+  args: { id: v.id("trainers") },
+  handler: async (ctx, args) => {
+    const trainer = await ctx.db.get(args.id);
+    if (!trainer) {
+      throw new Error("Trainer not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      isArchived: false,
+      status: true, // Set status to active when unarchiving
       updatedAt: Date.now(),
     });
 

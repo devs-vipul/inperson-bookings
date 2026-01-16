@@ -67,6 +67,7 @@ export default function TrainerDetailPage({
     useState<Id<"sessions"> | null>(null);
   const [deletingSessionId, setDeletingSessionId] =
     useState<Id<"sessions"> | null>(null);
+  const [isArchiveTrainerOpen, setIsArchiveTrainerOpen] = useState(false);
 
   const trainer = useQuery(api.trainers.getById, {
     id: trainerId as Id<"trainers">,
@@ -90,6 +91,7 @@ export default function TrainerDetailPage({
   const archiveSession = useMutation(api.sessions.archive);
   const unarchiveSession = useMutation(api.sessions.unarchive);
   const deleteSession = useMutation(api.sessions.remove);
+  const archiveTrainer = useMutation(api.trainers.archive);
   const { toast } = useToast();
 
   if (
@@ -189,6 +191,26 @@ export default function TrainerDetailPage({
         variant: "destructive",
         title: "Error",
         description: "Failed to delete session",
+      });
+    }
+  };
+
+  const handleArchiveTrainer = async () => {
+    try {
+      await archiveTrainer({ id: trainerId as Id<"trainers"> });
+      toast({
+        title: "Success",
+        description: "Trainer archived successfully",
+      });
+      setIsArchiveTrainerOpen(false);
+      // Redirect to trainers list
+      window.location.href = "/super-admin/trainers";
+    } catch (error) {
+      console.error("Error archiving trainer:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to archive trainer",
       });
     }
   };
@@ -303,6 +325,7 @@ export default function TrainerDetailPage({
                   backgroundColor: "#dc2626",
                   color: "white",
                 }}
+                onClick={() => setIsArchiveTrainerOpen(true)}
               >
                 <Archive className="h-4 w-4 mr-2" />
                 Archive
@@ -1133,6 +1156,48 @@ export default function TrainerDetailPage({
           onConfirm={handleDeleteSession}
         />
       )}
+
+      {/* Archive Trainer Dialog */}
+      <AlertDialog
+        open={isArchiveTrainerOpen}
+        onOpenChange={setIsArchiveTrainerOpen}
+      >
+        <AlertDialogContent
+          className="bg-black border-2"
+          style={{ borderColor: "#F2D578" }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              Archive Trainer
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-white/70">
+              This trainer will be archived and hidden from users. All existing
+              sessions and subscriptions will remain active, but new bookings
+              will be disabled. You can unarchive the trainer later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="border-2"
+              style={{ borderColor: "#F2D578", color: "#F2D578" }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleArchiveTrainer}
+              className="font-bold border-2"
+              style={{
+                backgroundColor: "#F2D578",
+                color: "#000000",
+                borderColor: "#F2D578",
+              }}
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Archive Trainer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

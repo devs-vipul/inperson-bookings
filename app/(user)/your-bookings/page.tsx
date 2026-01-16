@@ -144,9 +144,9 @@ export default function YourBookingsPage() {
                     <Badge
                       className="capitalize font-bold border-2"
                       style={{
-                        backgroundColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
-                        color: booking.status === "confirmed" ? "black" : "white",
-                        borderColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
+                        backgroundColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "paused" ? "#fbbf24" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
+                        color: booking.status === "confirmed" ? "black" : booking.status === "paused" ? "black" : "white",
+                        borderColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "paused" ? "#fbbf24" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
                       }}
                     >
                       {booking.status}

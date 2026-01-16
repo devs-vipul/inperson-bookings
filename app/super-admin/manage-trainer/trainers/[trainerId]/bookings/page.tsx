@@ -181,6 +181,8 @@ export default function TrainerBookingsPage({
                               className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ${
                                 booking.status === "confirmed"
                                   ? "bg-green-500/20 text-green-500"
+                                  : booking.status === "paused"
+                                  ? "bg-yellow-500/20 text-yellow-500"
                                   : "bg-red-500/20 text-red-500"
                               }`}
                             >

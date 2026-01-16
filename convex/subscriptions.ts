@@ -200,7 +200,8 @@ export const pause = mutation({
       updatedAt: Date.now(),
     });
 
-    // Cancel bookings that fall within the pause period (today to resume date)
+    // Pause bookings that fall within the pause period (today to resume date)
+    // Use "paused" status instead of "cancelled" to preserve bookings for when subscription resumes
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayString = today.toISOString().split("T")[0];
@@ -217,29 +218,29 @@ export const pause = mutation({
       )
       .collect();
 
-    let cancelledCount = 0;
+    let pausedCount = 0;
     for (const booking of bookingsInPausePeriod) {
       const firstSlotDate = booking.slots[0]?.date;
-      // Cancel if booking is between today (inclusive) and resume date (exclusive)
+      // Pause if booking is between today (inclusive) and resume date (exclusive)
       if (
         firstSlotDate &&
         firstSlotDate >= todayString &&
         firstSlotDate < resumeDateString
       ) {
         await ctx.db.patch(booking._id, {
-          status: "cancelled",
+          status: "paused",
           updatedAt: Date.now(),
         });
-        cancelledCount++;
+        pausedCount++;
       }
     }
 
     console.log(
-      `⏸️ Admin pause: Cancelled ${cancelledCount} bookings within pause period (${todayString} to ${resumeDateString})`
+      `⏸️ Admin pause: Paused ${pausedCount} bookings within pause period (${todayString} to ${resumeDateString})`
     );
     console.log("📌 Bookings after resume date are preserved");
 
-    return { success: true, cancelledBookings: cancelledCount };
+    return { success: true, pausedBookings: pausedCount };
   },
 });
 
@@ -249,13 +250,44 @@ export const resume = mutation({
     subscriptionId: v.id("subscriptions"),
   },
   handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    // Update subscription status
     await ctx.db.patch(args.subscriptionId, {
       status: "active",
       resumeDate: undefined,
       updatedAt: Date.now(),
     });
 
-    return { success: true };
+    // Restore paused bookings to confirmed status
+    const pausedBookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user_id", (q) => q.eq("userId", subscription.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("subscriptionId"), args.subscriptionId),
+          q.eq(q.field("status"), "paused")
+        )
+      )
+      .collect();
+
+    let restoredCount = 0;
+    for (const booking of pausedBookings) {
+      await ctx.db.patch(booking._id, {
+        status: "confirmed",
+        updatedAt: Date.now(),
+      });
+      restoredCount++;
+    }
+
+    console.log(
+      `▶️ Admin resume: Restored ${restoredCount} paused bookings to confirmed status`
+    );
+
+    return { success: true, restoredBookings: restoredCount };
   },
 });
 
@@ -332,46 +364,73 @@ export const updateResumeDate = mutation({
       updatedAt: Date.now(),
     });
 
-    // Cancel bookings within the new pause period (today to new resume date)
+    // Pause bookings within the new pause period (today to new resume date)
     // This handles the case where admin extends the pause date
+    // Also restore bookings that were paused but should now be confirmed
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayString = today.toISOString().split("T")[0];
     const newResumeDateString = args.resumeDate.split("T")[0];
 
+    // Get ALL bookings for this subscription (confirmed, paused, and cancelled)
+    // This ensures we can restore previously paused bookings if resume date moves earlier
     const bookings = await ctx.db
       .query("bookings")
       .withIndex("by_user_id", (q) => q.eq("userId", subscription.userId))
       .filter((q) =>
-        q.and(
-          q.eq(q.field("subscriptionId"), args.subscriptionId),
-          q.eq(q.field("status"), "confirmed")
-        )
+        q.eq(q.field("subscriptionId"), args.subscriptionId)
       )
       .collect();
 
-    let cancelledCount = 0;
+    let pausedCount = 0;
+    let restoredCount = 0;
+    
     for (const booking of bookings) {
       const firstSlotDate = booking.slots[0]?.date;
-      // Cancel if booking falls within the new pause period
-      if (
-        firstSlotDate &&
-        firstSlotDate >= todayString &&
-        firstSlotDate < newResumeDateString
-      ) {
-        await ctx.db.patch(booking._id, {
-          status: "cancelled",
-          updatedAt: Date.now(),
-        });
-        cancelledCount++;
+      
+      if (!firstSlotDate) continue;
+      
+      // Check if booking falls within the pause period (today to resume date)
+      const isInPausePeriod = 
+        firstSlotDate >= todayString && 
+        firstSlotDate < newResumeDateString;
+      
+      // Check if booking is after the resume date (should be confirmed)
+      const isAfterResumeDate = firstSlotDate >= newResumeDateString;
+      
+      if (isInPausePeriod) {
+        // Pause bookings within pause period (only if currently confirmed)
+        if (booking.status === "confirmed") {
+          await ctx.db.patch(booking._id, {
+            status: "paused",
+            updatedAt: Date.now(),
+          });
+          pausedCount++;
+        }
+      } else if (isAfterResumeDate) {
+        // Restore bookings after resume date (only if currently paused)
+        // These were likely paused during a previous pause but should now be active
+        if (booking.status === "paused") {
+          await ctx.db.patch(booking._id, {
+            status: "confirmed",
+            updatedAt: Date.now(),
+          });
+          restoredCount++;
+        }
       }
+      // Bookings before today are left as-is (past bookings)
+      // Cancelled bookings remain cancelled (permanent cancellation)
     }
 
     console.log(
-      `📅 Admin edit resume date: Cancelled ${cancelledCount} bookings within new pause period (${todayString} to ${newResumeDateString})`
+      `📅 Admin edit resume date: Paused ${pausedCount} bookings, restored ${restoredCount} bookings. Pause period: ${todayString} to ${newResumeDateString}`
     );
 
-    return { success: true, cancelledBookings: cancelledCount };
+    return { 
+      success: true, 
+      pausedBookings: pausedCount,
+      restoredBookings: restoredCount 
+    };
   },
 });
 

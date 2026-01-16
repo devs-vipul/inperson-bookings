@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,12 +21,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 type Trainer = Doc<"trainers">;
 
-export function TrainersList() {
-  const trainers = useQuery(api.trainers.getAll) as Trainer[] | undefined;
+interface TrainersListProps {
+  archived?: boolean;
+}
+
+export function TrainersList({ archived = false }: TrainersListProps) {
+  const trainers = useQuery(
+    archived ? api.trainers.getArchived : api.trainers.getAll
+  ) as Trainer[] | undefined;
   const updateStatus = useMutation(api.trainers.updateStatus);
+  const unarchiveTrainer = useMutation(api.trainers.unarchive);
   const { toast } = useToast();
 
   const handleStatusToggle = async (
@@ -51,6 +59,26 @@ export function TrainersList() {
           error instanceof Error
             ? error.message
             : "Failed to update trainer status",
+      });
+    }
+  };
+
+  const handleUnarchive = async (trainerId: Id<"trainers">) => {
+    try {
+      await unarchiveTrainer({ id: trainerId });
+      toast({
+        variant: "success",
+        title: "Success",
+        description: "Trainer unarchived successfully",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to unarchive trainer",
       });
     }
   };
@@ -87,7 +115,9 @@ export function TrainersList() {
         <CardContent>
           {trainers.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No trainers found. Create your first trainer to get started.
+              {archived
+                ? "No archived trainers found."
+                : "No trainers found. Create your first trainer to get started."}
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -104,19 +134,37 @@ export function TrainersList() {
                       Available Days
                     </th>
                     <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>Status</th>
+                    {archived && (
+                      <th className="text-left p-4 font-bold" style={{ color: "#F2D578" }}>Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {trainers.map((trainer, index) => (
                     <tr
                       key={trainer._id}
-                      className="border-b hover:bg-muted/50 transition-all"
+                      className={`border-b hover:bg-muted/50 transition-all ${archived ? "opacity-75" : ""}`}
                       style={{ borderColor: "rgba(242, 213, 120, 0.2)" }}
                     >
                       <td className="p-4 font-medium">
                         {String(index + 1).padStart(2, "0")}
                       </td>
-                      <td className="p-4 font-bold text-foreground">{trainer.name}</td>
+                      <td className="p-4 font-bold text-foreground">
+                        <div className="flex items-center gap-2">
+                          {trainer.name}
+                          {archived && (
+                            <Badge
+                              className="text-xs font-bold"
+                              style={{
+                                backgroundColor: "#666",
+                                color: "#fff",
+                              }}
+                            >
+                              ARCHIVED
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-4 text-muted-foreground">
                         {trainer.email}
                       </td>
@@ -151,12 +199,25 @@ export function TrainersList() {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <Switch
-                            checked={trainer.status}
-                            onCheckedChange={() =>
-                              handleStatusToggle(trainer._id, trainer.status)
-                            }
-                          />
+                          {!archived && (
+                            <Switch
+                              checked={trainer.status}
+                              onCheckedChange={() =>
+                                handleStatusToggle(trainer._id, trainer.status)
+                              }
+                            />
+                          )}
+                          {archived && (
+                            <Badge
+                              className="text-xs font-bold"
+                              style={{
+                                backgroundColor: "#666",
+                                color: "#fff",
+                              }}
+                            >
+                              INACTIVE
+                            </Badge>
+                          )}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -181,6 +242,23 @@ export function TrainersList() {
                           </DropdownMenu>
                         </div>
                       </td>
+                      {archived && (
+                        <td className="p-4">
+                          <Button
+                            size="sm"
+                            className="font-bold border-2"
+                            style={{
+                              backgroundColor: "#F2D578",
+                              color: "#000000",
+                              borderColor: "#F2D578",
+                            }}
+                            onClick={() => handleUnarchive(trainer._id)}
+                          >
+                            <Archive className="h-3 w-3 mr-2" />
+                            Unarchive
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

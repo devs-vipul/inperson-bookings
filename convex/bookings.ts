@@ -37,14 +37,14 @@ export const getByTrainerId = query({
       .query("bookings")
       .withIndex("by_trainer_id", (q) => q.eq("trainerId", args.trainerId))
       .collect();
-    
+
     // Populate user data for each booking
     return await Promise.all(
       bookings.map(async (booking) => {
         const user = await ctx.db.get(booking.userId);
         const session = await ctx.db.get(booking.sessionId);
         const trainer = await ctx.db.get(booking.trainerId);
-        
+
         return {
           ...booking,
           user,
@@ -153,8 +153,9 @@ export const create = mutation({
 
       // Check for conflicts
       for (const booking of bookings) {
-        // Skip checking against cancelled bookings
-        if (booking.status === "cancelled") continue;
+        // Skip checking against cancelled or paused bookings
+        if (booking.status === "cancelled" || booking.status === "paused")
+          continue;
 
         for (const existingSlot of booking.slots) {
           if (existingSlot.date === slot.date) {
@@ -348,18 +349,20 @@ export const createAdvancedBooking = mutation({
     today.setHours(0, 0, 0, 0);
     const maxBookingDate = new Date(today);
     maxBookingDate.setDate(today.getDate() + 20); // 20 days ahead (almost 3 weeks)
-    
+
     for (const slot of args.slots) {
       const slotDate = new Date(slot.date + "T00:00:00"); // Ensure no time component
       if (slotDate > maxBookingDate) {
-        throw new Error("Can only book up to 3 weeks in advance (current week + 2 advance weeks)");
+        throw new Error(
+          "Can only book up to 3 weeks in advance (current week + 2 advance weeks)"
+        );
       }
     }
 
     // Check weekly limit per calendar week (Monday-Sunday)
     // Group new slots by calendar week and check each week
     const slotsByWeek = new Map<string, typeof args.slots>();
-    
+
     for (const slot of args.slots) {
       const slotDate = new Date(slot.date);
       // Get Monday of the week (ISO week starts on Monday)
@@ -368,9 +371,9 @@ export const createAdvancedBooking = mutation({
       const monday = new Date(slotDate);
       monday.setDate(slotDate.getDate() + diff);
       monday.setHours(0, 0, 0, 0);
-      
-      const weekKey = monday.toISOString().split('T')[0]; // YYYY-MM-DD of Monday
-      
+
+      const weekKey = monday.toISOString().split("T")[0]; // YYYY-MM-DD of Monday
+
       if (!slotsByWeek.has(weekKey)) {
         slotsByWeek.set(weekKey, []);
       }
@@ -394,12 +397,16 @@ export const createAdvancedBooking = mutation({
       // weekKey is YYYY-MM-DD of Monday
       const sunday = new Date(weekKey);
       sunday.setDate(sunday.getDate() + 6);
-      const sundayString = sunday.toISOString().split('T')[0];
+      const sundayString = sunday.toISOString().split("T")[0];
 
       // Count existing bookings in this calendar week using string comparison
       const weekBookings = existingBookings.filter((booking) => {
         const bookingDateString = booking.slots[0]?.date; // Already a string YYYY-MM-DD
-        return bookingDateString && bookingDateString >= weekKey && bookingDateString <= sundayString;
+        return (
+          bookingDateString &&
+          bookingDateString >= weekKey &&
+          bookingDateString <= sundayString
+        );
       });
 
       const existingSlotsInWeek = weekBookings.reduce(
@@ -409,10 +416,14 @@ export const createAdvancedBooking = mutation({
       const newSlotsInWeek = weekSlots.length;
       const totalSlotsInWeek = existingSlotsInWeek + newSlotsInWeek;
 
-      console.log(`[ADVANCE BOOKING VALIDATION] Week ${weekKey} - ${sundayString}:`);
+      console.log(
+        `[ADVANCE BOOKING VALIDATION] Week ${weekKey} - ${sundayString}:`
+      );
       console.log(`  - Existing slots: ${existingSlotsInWeek}`);
       console.log(`  - New slots: ${newSlotsInWeek}`);
-      console.log(`  - Total: ${totalSlotsInWeek}/${subscription.sessionsPerWeek}`);
+      console.log(
+        `  - Total: ${totalSlotsInWeek}/${subscription.sessionsPerWeek}`
+      );
 
       if (totalSlotsInWeek > subscription.sessionsPerWeek) {
         throw new Error(
