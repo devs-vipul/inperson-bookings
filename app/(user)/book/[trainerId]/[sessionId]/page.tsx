@@ -47,6 +47,7 @@ export default function BookingPage({
 
   // Mutations
   const createBookingWithEmails = useMutation(api.bookings.createWithEmails);
+  const createAdvancedBooking = useMutation(api.bookings.createAdvancedBooking);
 
   // Fetch data
   const trainer = useQuery(api.trainers.getById, {
@@ -67,6 +68,18 @@ export default function BookingPage({
   const convexUser = useQuery(
     api.users.getByClerkId,
     user?.id ? { clerkUserId: user.id } : "skip"
+  );
+
+  // Check for active subscription
+  const activeSubscription = useQuery(
+    api.subscriptions.getActiveSubscription,
+    convexUser && sessionId
+      ? {
+          userId: convexUser._id,
+          trainerId: trainerId as Id<"trainers">,
+          sessionId: sessionId as Id<"sessions">,
+        }
+      : "skip"
   );
 
   const createBooking = useMutation(api.bookings.create);
@@ -285,7 +298,52 @@ export default function BookingPage({
     const bypassStripe = process.env.NEXT_PUBLIC_BYPASS_STRIPE === "true";
 
     try {
-      if (bypassStripe) {
+      // ADVANCED BOOKING MODE: If user has active subscription, book without payment
+      if (activeSubscription && activeSubscription.status === "active") {
+        // Validate advance booking limit: 20 days ahead (current week + 2 advance weeks)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const maxBookingDate = new Date(today);
+        maxBookingDate.setDate(today.getDate() + 20); // 20 days ahead
+        
+        const allSlotsWithinLimit = selectedSlots.every((slot) => {
+          const slotDate = new Date(slot.date + "T00:00:00");
+          return slotDate <= maxBookingDate;
+        });
+
+        if (!allSlotsWithinLimit) {
+          toast({
+            variant: "destructive",
+            title: "Booking limit exceeded",
+            description: "You can only book up to 3 weeks in advance with your subscription (current week + 2 advance weeks).",
+          });
+          return;
+        }
+
+        // Create advanced booking
+        const bookingId = await createAdvancedBooking({
+          userId: convexUser._id,
+          trainerId: trainerId as Id<"trainers">,
+          sessionId: sessionId as Id<"sessions">,
+          subscriptionId: activeSubscription._id,
+          slots: selectedSlots.map((slot) => ({
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          })),
+        });
+
+        // Redirect to confirmation page
+        router.push(`/booking-confirmation?booking_id=${bookingId}&advanced=true`);
+      } else if (activeSubscription && activeSubscription.status === "past_due") {
+        // Subscription payment failed - don't allow new bookings
+        toast({
+          variant: "destructive",
+          title: "Payment Required",
+          description: "Your subscription payment failed. Please update your payment method to continue booking. Your existing bookings are preserved.",
+        });
+        return;
+      } else if (bypassStripe) {
         // BYPASS MODE: Create booking directly without Stripe payment
         const bookingId = await createBookingWithEmails({
           userId: convexUser._id,
@@ -644,6 +702,97 @@ export default function BookingPage({
           </Card>
         </motion.div>
 
+        {/* Subscription Status Card */}
+        {activeSubscription && (
+          <motion.div
+            className="mt-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Card 
+              className="border-2" 
+              style={{ 
+                borderColor: activeSubscription.status === "past_due" ? "#FF6B6B" : "#F2D578", 
+                backgroundColor: activeSubscription.status === "past_due" ? "rgba(255, 107, 107, 0.05)" : "rgba(242, 213, 120, 0.05)" 
+              }}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <motion.div
+                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: activeSubscription.status === "past_due" ? "#FF6B6B" : "#F2D578" }}
+                      animate={activeSubscription.status === "past_due" ? { scale: [1, 1.05, 1] } : { scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <span className="text-2xl">{activeSubscription.status === "past_due" ? "!" : "✓"}</span>
+                    </motion.div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 
+                      className="text-lg font-bold mb-2" 
+                      style={{ color: activeSubscription.status === "past_due" ? "#FF6B6B" : "#F2D578" }}
+                    >
+                      {activeSubscription.status === "past_due" ? "Payment Issue" : "Active Subscription"}
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      {activeSubscription.status === "past_due" ? (
+                        <div className="p-3 rounded-lg border border-red-500 bg-red-500/10 mb-3">
+                          <p className="text-red-400 font-medium mb-2">
+                            ⚠️ Your subscription payment failed
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Stripe is attempting to process your payment. Your existing bookings are safe, but you cannot book new sessions until payment is successful.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          You have an active subscription for <span className="font-semibold text-white">{activeSubscription.session?.name}</span>
+                        </p>
+                      )}
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        <div className="p-3 rounded-lg border" style={{ borderColor: "#F2D578", backgroundColor: "rgba(242, 213, 120, 0.1)" }}>
+                          <p className="text-xs text-muted-foreground mb-1">Sessions per Week</p>
+                          <p className="text-xl font-bold" style={{ color: "#F2D578" }}>
+                            {activeSubscription.sessionsPerWeek}
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg border" style={{ borderColor: "#F2D578", backgroundColor: "rgba(242, 213, 120, 0.1)" }}>
+                          <p className="text-xs text-muted-foreground mb-1">Booked This Period</p>
+                          <p className="text-xl font-bold" style={{ color: "#F2D578" }}>
+                            {activeSubscription.bookedSlotsInPeriod || 0}
+                          </p>
+                        </div>
+                      </div>
+                      {(activeSubscription.bookedSlotsInPeriod || 0) < activeSubscription.sessionsPerWeek && (
+                        <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: "rgba(242, 213, 120, 0.15)" }}>
+                          <p className="text-sm font-medium" style={{ color: "#F2D578" }}>
+                            🎉 You can book {activeSubscription.sessionsPerWeek - (activeSubscription.bookedSlotsInPeriod || 0)} more session{activeSubscription.sessionsPerWeek - (activeSubscription.bookedSlotsInPeriod || 0) > 1 ? "s" : ""} this week without payment!
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Book up to 3 weeks ahead (current + 2 advance weeks)
+                          </p>
+                        </div>
+                      )}
+                      {(activeSubscription.bookedSlotsInPeriod || 0) >= activeSubscription.sessionsPerWeek && (
+                        <div className="mt-3 p-3 rounded-lg border border-orange-500" style={{ backgroundColor: "rgba(255, 165, 0, 0.1)" }}>
+                          <p className="text-sm font-medium text-orange-400">
+                            ⚠️ You've used all {activeSubscription.sessionsPerWeek} sessions for this calendar week
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            You can book for next week! (Week resets every Monday)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Book Button */}
         {selectedSlots.length > 0 && (
           <motion.div
@@ -666,8 +815,7 @@ export default function BookingPage({
                   color: selectedSlots.length === maxSlots ? "#000000" : undefined,
                 }}
               >
-                Book {selectedSlots.length} Session
-                {selectedSlots.length > 1 ? "s" : ""}
+                {activeSubscription ? "Book with Subscription" : `Book ${selectedSlots.length} Session${selectedSlots.length > 1 ? "s" : ""}`}
               </Button>
             </motion.div>
           </motion.div>

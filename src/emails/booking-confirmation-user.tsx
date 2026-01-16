@@ -20,6 +20,7 @@ interface BookingConfirmationUserProps {
   sessionName: string;
   sessionsPerWeek: number;
   duration: number;
+  isAdvancedBooking?: boolean; // true if booked via active subscription
   slots: Array<{
     date: string; // "YYYY-MM-DD"
     startTime: string; // "HH:MM"
@@ -33,8 +34,10 @@ export default function BookingConfirmationUser({
   sessionName,
   sessionsPerWeek,
   duration,
+  isAdvancedBooking = false,
   slots,
 }: BookingConfirmationUserProps) {
+  const BRAND_YELLOW = "#F2D578";
   // Format date for display
   const formatDate = (dateString: string): string => {
     const [year, month, day] = dateString.split("-").map(Number);
@@ -90,20 +93,47 @@ export default function BookingConfirmationUser({
               backgroundColor: "#1a1a1a",
               padding: "30px",
               borderRadius: "8px",
+              border: `3px solid ${BRAND_YELLOW}`,
               color: "#ffffff",
             }}
           >
             <Heading
               style={{
                 fontSize: "28px",
-                color: "#ffffff",
+                color: BRAND_YELLOW,
                 marginBottom: "15px",
                 textAlign: "center",
                 fontWeight: "bold",
               }}
             >
-              Booking Confirmation
+              ✓ Booking Confirmed!
             </Heading>
+            {isAdvancedBooking && (
+              <Section
+                style={{
+                  backgroundColor: BRAND_YELLOW,
+                  color: "#000000",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  textAlign: "center",
+                  marginBottom: "20px",
+                  display: "inline-block",
+                  width: "auto",
+                  margin: "0 auto 20px auto",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    margin: 0,
+                    color: "#000000",
+                  }}
+                >
+                  🔄 Advanced Booking (No Payment Required)
+                </Text>
+              </Section>
+            )}
             <Text
               style={{
                 fontSize: "16px",
@@ -133,18 +163,21 @@ export default function BookingConfirmationUser({
                 padding: "25px",
                 borderRadius: "8px",
                 marginBottom: "20px",
+                border: `2px solid ${BRAND_YELLOW}`,
                 color: "#ffffff",
               }}
             >
               <Text
                 style={{
                   fontSize: "18px",
-                  color: "#ffffff",
+                  color: BRAND_YELLOW,
                   fontWeight: "bold",
                   marginBottom: "15px",
+                  borderBottom: `2px solid ${BRAND_YELLOW}`,
+                  paddingBottom: "10px",
                 }}
               >
-                Booking Details
+                📋 Booking Details
               </Text>
               <Text style={{ fontSize: "14px", color: "#d9d9d9", marginBottom: "8px" }}>
                 <strong>Trainer:</strong> {trainerName}
@@ -163,13 +196,13 @@ export default function BookingConfirmationUser({
               <Text
                 style={{
                   fontSize: "16px",
-                  color: "#ffffff",
+                  color: BRAND_YELLOW,
                   fontWeight: "bold",
                   marginTop: "20px",
                   marginBottom: "10px",
                 }}
               >
-                Your Scheduled Sessions:
+                📅 Your Scheduled Sessions:
               </Text>
               {slots.map((slot, index) => (
                 <Section
@@ -179,12 +212,13 @@ export default function BookingConfirmationUser({
                     padding: "15px",
                     borderRadius: "6px",
                     marginBottom: "10px",
+                    border: `2px solid ${BRAND_YELLOW}`,
                   }}
                 >
                   <Text
                     style={{
                       fontSize: "15px",
-                      color: "#F2D679",
+                      color: BRAND_YELLOW,
                       fontWeight: "bold",
                       marginBottom: "8px",
                     }}
@@ -220,18 +254,19 @@ export default function BookingConfirmationUser({
               }}
             >
               <Button
-                href="https://www.breezewayfitness.com/your-bookings"
+                href="https://www.breezewayfitness.com/my-bookings"
                 style={{
-                  backgroundColor: "#F2D679",
+                  backgroundColor: BRAND_YELLOW,
                   color: "#000000",
-                  padding: "12px 30px",
-                  borderRadius: "6px",
+                  padding: "14px 35px",
+                  borderRadius: "8px",
                   textDecoration: "none",
                   fontWeight: "bold",
                   fontSize: "16px",
+                  border: `2px solid ${BRAND_YELLOW}`,
                 }}
               >
-                View My Bookings
+                📖 View My Bookings
               </Button>
             </Section>
           </Section>
@@ -313,7 +348,7 @@ export default function BookingConfirmationUser({
               Visit our website —
               <a
                 href="https://www.breezewayfitness.com"
-                style={{ color: "#F2D679", textDecoration: "none" }}
+                style={{ color: BRAND_YELLOW, textDecoration: "none", fontWeight: "bold" }}
               >
                 {" "}www.breezewayfitness.com
               </a>

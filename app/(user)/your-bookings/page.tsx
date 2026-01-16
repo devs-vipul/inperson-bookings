@@ -140,16 +140,30 @@ export default function YourBookingsPage() {
                       {booking.session.name}
                     </p>
                   </div>
-                  <Badge
-                    className="capitalize font-bold border-2"
-                    style={{
-                      backgroundColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
-                      color: booking.status === "confirmed" ? "black" : "white",
-                      borderColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
-                    }}
-                  >
-                    {booking.status}
-                  </Badge>
+                  <div className="flex flex-col gap-2 items-end">
+                    <Badge
+                      className="capitalize font-bold border-2"
+                      style={{
+                        backgroundColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
+                        color: booking.status === "confirmed" ? "black" : "white",
+                        borderColor: booking.status === "confirmed" ? "#F2D578" : booking.status === "cancelled" ? "#ef4444" : "#6b7280",
+                      }}
+                    >
+                      {booking.status}
+                    </Badge>
+                    {booking.isAdvancedBooking && (
+                      <Badge
+                        className="font-bold border-2 text-xs"
+                        style={{
+                          backgroundColor: "rgba(147, 51, 234, 0.2)",
+                          color: "#a78bfa",
+                          borderColor: "#a78bfa",
+                        }}
+                      >
+                        🔄 Subscription
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-4 text-sm">
                   <div className="flex items-center gap-1.5 font-medium">

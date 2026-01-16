@@ -319,6 +319,202 @@ export const cancel = mutation({
   },
 });
 
+// Mutation to create advanced booking (for active subscribers)
+export const createAdvancedBooking = mutation({
+  args: {
+    userId: v.id("users"),
+    trainerId: v.id("trainers"),
+    sessionId: v.id("sessions"),
+    subscriptionId: v.id("subscriptions"),
+    slots: v.array(
+      v.object({
+        date: v.string(),
+        startTime: v.string(),
+        endTime: v.string(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Validate subscription is active
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription || subscription.status !== "active") {
+      throw new Error("No active subscription found");
+    }
+
+    // Validate advance booking limit: Current week + 2 advance weeks = 21 days
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxBookingDate = new Date(today);
+    maxBookingDate.setDate(today.getDate() + 20); // 20 days ahead (almost 3 weeks)
+    
+    for (const slot of args.slots) {
+      const slotDate = new Date(slot.date + "T00:00:00"); // Ensure no time component
+      if (slotDate > maxBookingDate) {
+        throw new Error("Can only book up to 3 weeks in advance (current week + 2 advance weeks)");
+      }
+    }
+
+    // Check weekly limit per calendar week (Monday-Sunday)
+    // Group new slots by calendar week and check each week
+    const slotsByWeek = new Map<string, typeof args.slots>();
+    
+    for (const slot of args.slots) {
+      const slotDate = new Date(slot.date);
+      // Get Monday of the week (ISO week starts on Monday)
+      const dayOfWeek = slotDate.getDay();
+      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Sunday = 0, Monday = 1
+      const monday = new Date(slotDate);
+      monday.setDate(slotDate.getDate() + diff);
+      monday.setHours(0, 0, 0, 0);
+      
+      const weekKey = monday.toISOString().split('T')[0]; // YYYY-MM-DD of Monday
+      
+      if (!slotsByWeek.has(weekKey)) {
+        slotsByWeek.set(weekKey, []);
+      }
+      slotsByWeek.get(weekKey)!.push(slot);
+    }
+
+    // For each week, check if user has already booked sessions
+    const existingBookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user_id", (q) => q.eq("userId", args.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("trainerId"), args.trainerId),
+          q.eq(q.field("sessionId"), args.sessionId),
+          q.eq(q.field("status"), "confirmed")
+        )
+      )
+      .collect();
+
+    for (const [weekKey, weekSlots] of slotsByWeek) {
+      // weekKey is YYYY-MM-DD of Monday
+      const sunday = new Date(weekKey);
+      sunday.setDate(sunday.getDate() + 6);
+      const sundayString = sunday.toISOString().split('T')[0];
+
+      // Count existing bookings in this calendar week using string comparison
+      const weekBookings = existingBookings.filter((booking) => {
+        const bookingDateString = booking.slots[0]?.date; // Already a string YYYY-MM-DD
+        return bookingDateString && bookingDateString >= weekKey && bookingDateString <= sundayString;
+      });
+
+      const existingSlotsInWeek = weekBookings.reduce(
+        (acc, booking) => acc + booking.slots.length,
+        0
+      );
+      const newSlotsInWeek = weekSlots.length;
+      const totalSlotsInWeek = existingSlotsInWeek + newSlotsInWeek;
+
+      console.log(`[ADVANCE BOOKING VALIDATION] Week ${weekKey} - ${sundayString}:`);
+      console.log(`  - Existing slots: ${existingSlotsInWeek}`);
+      console.log(`  - New slots: ${newSlotsInWeek}`);
+      console.log(`  - Total: ${totalSlotsInWeek}/${subscription.sessionsPerWeek}`);
+
+      if (totalSlotsInWeek > subscription.sessionsPerWeek) {
+        throw new Error(
+          `Cannot book more than ${subscription.sessionsPerWeek} sessions per week. For the week of ${weekKey} to ${sundayString}, you have already booked ${existingSlotsInWeek} session(s). You're trying to add ${newSlotsInWeek} more, which would exceed the limit.`
+        );
+      }
+    }
+
+    // Validate slot availability (same as regular booking)
+    for (const slot of args.slots) {
+      const bookings = await ctx.db
+        .query("bookings")
+        .withIndex("by_trainer_id", (q) => q.eq("trainerId", args.trainerId))
+        .collect();
+
+      for (const booking of bookings) {
+        if (booking.status === "cancelled") continue;
+
+        for (const existingSlot of booking.slots) {
+          if (existingSlot.date === slot.date) {
+            const existingStart = timeToMinutes(existingSlot.startTime);
+            const existingEnd = timeToMinutes(existingSlot.endTime);
+            const newStart = timeToMinutes(slot.startTime);
+            const newEnd = timeToMinutes(slot.endTime);
+
+            if (
+              (newStart >= existingStart && newStart < existingEnd) ||
+              (newEnd > existingStart && newEnd <= existingEnd) ||
+              (newStart <= existingStart && newEnd >= existingEnd)
+            ) {
+              throw new Error(
+                `Time slot ${slot.startTime}-${slot.endTime} on ${slot.date} is already booked`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Get user, trainer, and session data for emails
+    const user = await ctx.db.get(args.userId);
+    const trainer = await ctx.db.get(args.trainerId);
+    const session = await ctx.db.get(args.sessionId);
+
+    if (!user || !trainer || !session) {
+      throw new Error("User, trainer, or session not found");
+    }
+
+    // Create the advanced booking
+    const bookingId = await ctx.db.insert("bookings", {
+      userId: args.userId,
+      trainerId: args.trainerId,
+      sessionId: args.sessionId,
+      slots: args.slots,
+      status: "confirmed",
+      subscriptionId: args.subscriptionId,
+      isAdvancedBooking: true,
+      paymentStatus: "paid", // Paid via subscription
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Send emails asynchronously
+    try {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.emails.sendBookingConfirmationToUser,
+        {
+          userEmail: user.email || "",
+          userName: user.name || "User",
+          trainerName: trainer.name,
+          sessionName: session.name,
+          sessionsPerWeek: session.sessionsPerWeek,
+          duration: session.duration,
+          isAdvancedBooking: true, // This is an advanced booking
+          slots: args.slots,
+        }
+      );
+
+      await ctx.scheduler.runAfter(
+        0,
+        internal.emails.sendBookingNotificationToTrainer,
+        {
+          trainerEmail: trainer.email,
+          trainerName: trainer.name,
+          userName: user.name || "User",
+          userEmail: user.email || "",
+          sessionName: session.name,
+          sessionsPerWeek: session.sessionsPerWeek,
+          duration: session.duration,
+          isAdvancedBooking: true, // This is an advanced booking
+          slots: args.slots,
+        }
+      );
+    } catch (emailError) {
+      console.error("Error scheduling emails:", emailError);
+    }
+
+    return bookingId;
+  },
+});
+
 // Query to check if user has active subscription for a session
 export const hasActiveSubscription = query({
   args: {

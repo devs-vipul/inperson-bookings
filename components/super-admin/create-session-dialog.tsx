@@ -143,7 +143,7 @@ export function CreateSessionDialog({
           Create Session
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] bg-black">
         <DialogHeader>
           <DialogTitle>Create Session</DialogTitle>
           <DialogDescription>

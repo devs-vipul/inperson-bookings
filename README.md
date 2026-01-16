@@ -2,6 +2,8 @@
 
 Trainer availability, slot management, and user bookings built with Next.js, Convex, and shadcn/ui.
 
+📖 **[Complete Documentation](./COMPLETE_DOCUMENTATION.md)** - Everything you need to know in one place!
+
 ## Features
 
 - **Super-admin trainer management**: create trainers, edit availability, create sessions with automatic Stripe product creation.

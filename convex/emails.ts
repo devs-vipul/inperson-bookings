@@ -27,6 +27,7 @@ export const sendBookingConfirmationToUser = internalAction({
     sessionName: v.string(),
     sessionsPerWeek: v.number(),
     duration: v.number(),
+    isAdvancedBooking: v.optional(v.boolean()),
     slots: v.array(
       v.object({
         date: v.string(),
@@ -57,6 +58,7 @@ export const sendBookingConfirmationToUser = internalAction({
           sessionName: args.sessionName,
           sessionsPerWeek: args.sessionsPerWeek,
           duration: args.duration,
+          isAdvancedBooking: args.isAdvancedBooking || false,
           slots: args.slots,
         })
       );
@@ -112,6 +114,7 @@ export const sendBookingNotificationToTrainer = internalAction({
     sessionName: v.string(),
     sessionsPerWeek: v.number(),
     duration: v.number(),
+    isAdvancedBooking: v.optional(v.boolean()),
     slots: v.array(
       v.object({
         date: v.string(),
@@ -143,6 +146,7 @@ export const sendBookingNotificationToTrainer = internalAction({
           sessionName: args.sessionName,
           sessionsPerWeek: args.sessionsPerWeek,
           duration: args.duration,
+          isAdvancedBooking: args.isAdvancedBooking || false,
           slots: args.slots,
         })
       );

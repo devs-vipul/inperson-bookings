@@ -61,6 +61,79 @@ export const getByStripeId = query({
   },
 });
 
+// Get active subscription for a user, trainer, and session
+export const getActiveSubscription = query({
+  args: {
+    userId: v.id("users"),
+    trainerId: v.id("trainers"),
+    sessionId: v.id("sessions"),
+  },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_user_trainer_session", (q) =>
+        q
+          .eq("userId", args.userId)
+          .eq("trainerId", args.trainerId)
+          .eq("sessionId", args.sessionId)
+      )
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+
+    if (!subscription) {
+      return null;
+    }
+
+    const session = await ctx.db.get(subscription.sessionId);
+    
+    // Get current calendar week (Monday-Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Sunday = 0, Monday = 1
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    
+    const mondayString = monday.toISOString().split('T')[0];
+    const sundayString = sunday.toISOString().split('T')[0];
+    
+    // Get all bookings for this user/trainer/session combo
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user_id", (q) => q.eq("userId", args.userId))
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("trainerId"), args.trainerId),
+          q.eq(q.field("sessionId"), args.sessionId),
+          q.eq(q.field("status"), "confirmed")
+        )
+      )
+      .collect();
+    
+    // Count slots booked in the CURRENT CALENDAR WEEK only
+    const currentWeekBookings = bookings.filter((booking) => {
+      const firstSlotDate = booking.slots[0]?.date;
+      return firstSlotDate && firstSlotDate >= mondayString && firstSlotDate <= sundayString;
+    });
+    
+    const currentWeekSlotsBooked = currentWeekBookings.reduce((acc, booking) => {
+      return acc + booking.slots.length;
+    }, 0);
+
+    return {
+      ...subscription,
+      session,
+      bookedSlotsInPeriod: currentWeekSlotsBooked, // Now shows current week only
+      currentWeekStart: mondayString,
+      currentWeekEnd: sundayString,
+    };
+  },
+});
+
 // Get all subscriptions for a trainer
 export const getByTrainerId = query({
   args: { trainerId: v.id("trainers") },
@@ -93,13 +166,58 @@ export const pause = mutation({
     resumeDate: v.string(), // ISO date string
   },
   handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    // Update subscription status
     await ctx.db.patch(args.subscriptionId, {
       status: "paused",
       resumeDate: args.resumeDate,
       updatedAt: Date.now(),
     });
 
-    return { success: true };
+    // Cancel bookings that fall within the pause period (today to resume date)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayString = today.toISOString().split("T")[0];
+    const resumeDateString = args.resumeDate.split("T")[0];
+
+    const bookingsInPausePeriod = await ctx.db
+      .query("bookings")
+      .withIndex("by_user_id", (q) => q.eq("userId", subscription.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("subscriptionId"), args.subscriptionId),
+          q.eq(q.field("status"), "confirmed")
+        )
+      )
+      .collect();
+
+    let cancelledCount = 0;
+    for (const booking of bookingsInPausePeriod) {
+      const firstSlotDate = booking.slots[0]?.date;
+      // Cancel if booking is between today (inclusive) and resume date (exclusive)
+      if (
+        firstSlotDate &&
+        firstSlotDate >= todayString &&
+        firstSlotDate < resumeDateString
+      ) {
+        await ctx.db.patch(booking._id, {
+          status: "cancelled",
+          updatedAt: Date.now(),
+        });
+        cancelledCount++;
+      }
+    }
+
+    console.log(
+      `⏸️ Admin pause: Cancelled ${cancelledCount} bookings within pause period (${todayString} to ${resumeDateString})`
+    );
+    console.log("📌 Bookings after resume date are preserved");
+
+    return { success: true, cancelledBookings: cancelledCount };
   },
 });
 
@@ -126,6 +244,12 @@ export const cancel = mutation({
     cancelReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    // Update subscription status
     await ctx.db.patch(args.subscriptionId, {
       status: "cancelled",
       cancelledAt: Date.now(),
@@ -133,7 +257,38 @@ export const cancel = mutation({
       updatedAt: Date.now(),
     });
 
-    return { success: true };
+    // Cancel future bookings linked to this subscription
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayString = today.toISOString().split("T")[0];
+
+    const futureBookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user_id", (q) => q.eq("userId", subscription.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("subscriptionId"), args.subscriptionId),
+          q.eq(q.field("status"), "confirmed")
+        )
+      )
+      .collect();
+
+    let cancelledCount = 0;
+    for (const booking of futureBookings) {
+      const firstSlotDate = booking.slots[0]?.date;
+      if (firstSlotDate && firstSlotDate > todayString) {
+        await ctx.db.patch(booking._id, {
+          status: "cancelled",
+          updatedAt: Date.now(),
+        });
+        cancelledCount++;
+      }
+    }
+
+    console.log(`🗑️ Admin cancel: Cancelled ${cancelledCount} future bookings`);
+    console.log("📌 Past bookings are preserved for records");
+
+    return { success: true, cancelledBookings: cancelledCount };
   },
 });
 
@@ -144,12 +299,57 @@ export const updateResumeDate = mutation({
     resumeDate: v.string(),
   },
   handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    // Update resume date
     await ctx.db.patch(args.subscriptionId, {
       resumeDate: args.resumeDate,
       updatedAt: Date.now(),
     });
 
-    return { success: true };
+    // Cancel bookings within the new pause period (today to new resume date)
+    // This handles the case where admin extends the pause date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayString = today.toISOString().split("T")[0];
+    const newResumeDateString = args.resumeDate.split("T")[0];
+
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_user_id", (q) => q.eq("userId", subscription.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("subscriptionId"), args.subscriptionId),
+          q.eq(q.field("status"), "confirmed")
+        )
+      )
+      .collect();
+
+    let cancelledCount = 0;
+    for (const booking of bookings) {
+      const firstSlotDate = booking.slots[0]?.date;
+      // Cancel if booking falls within the new pause period
+      if (
+        firstSlotDate &&
+        firstSlotDate >= todayString &&
+        firstSlotDate < newResumeDateString
+      ) {
+        await ctx.db.patch(booking._id, {
+          status: "cancelled",
+          updatedAt: Date.now(),
+        });
+        cancelledCount++;
+      }
+    }
+
+    console.log(
+      `📅 Admin edit resume date: Cancelled ${cancelledCount} bookings within new pause period (${todayString} to ${newResumeDateString})`
+    );
+
+    return { success: true, cancelledBookings: cancelledCount };
   },
 });
 

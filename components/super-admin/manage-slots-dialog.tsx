@@ -252,7 +252,7 @@ export function ManageSlotsDialog({
   if (availability === undefined || existingSlots === undefined) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl">
+        <DialogContent className="max-w-6xl bg-black">
           <div className="flex items-center justify-center py-8">
             <p className="text-muted-foreground">Loading...</p>
           </div>
@@ -263,7 +263,7 @@ export function ManageSlotsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-black">
         <DialogHeader>
           <DialogTitle>
             {trainerName} - Admin Calendar

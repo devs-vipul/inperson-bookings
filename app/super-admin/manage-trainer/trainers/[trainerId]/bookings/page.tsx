@@ -176,15 +176,29 @@ export default function TrainerBookingsPage({
                           </span>
                         </td>
                         <td className="p-4">
-                          <span
-                            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ${
-                              booking.status === "confirmed"
-                                ? "bg-green-500/20 text-green-500"
-                                : "bg-red-500/20 text-red-500"
-                            }`}
-                          >
-                            {booking.status}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ${
+                                booking.status === "confirmed"
+                                  ? "bg-green-500/20 text-green-500"
+                                  : "bg-red-500/20 text-red-500"
+                              }`}
+                            >
+                              {booking.status}
+                            </span>
+                            {booking.isAdvancedBooking && (
+                              <span
+                                className="inline-flex items-center rounded-md px-2 py-1 text-xs font-bold border"
+                                style={{
+                                  backgroundColor: "rgba(147, 51, 234, 0.2)",
+                                  color: "#a78bfa",
+                                  borderColor: "#a78bfa",
+                                }}
+                              >
+                                🔄 Sub
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ));

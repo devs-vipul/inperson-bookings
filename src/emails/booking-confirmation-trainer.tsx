@@ -19,6 +19,7 @@ interface BookingConfirmationTrainerProps {
   sessionName: string;
   sessionsPerWeek: number;
   duration: number;
+  isAdvancedBooking?: boolean; // true if booked via active subscription
   slots: Array<{
     date: string; // "YYYY-MM-DD"
     startTime: string; // "HH:MM"
@@ -33,8 +34,10 @@ export default function BookingConfirmationTrainer({
   sessionName,
   sessionsPerWeek,
   duration,
+  isAdvancedBooking = false,
   slots,
 }: BookingConfirmationTrainerProps) {
+  const BRAND_YELLOW = "#F2D578";
   // Format date for display
   const formatDate = (dateString: string): string => {
     const [year, month, day] = dateString.split("-").map(Number);
@@ -90,20 +93,47 @@ export default function BookingConfirmationTrainer({
               backgroundColor: "#1a1a1a",
               padding: "30px",
               borderRadius: "8px",
+              border: `3px solid ${BRAND_YELLOW}`,
               color: "#ffffff",
             }}
           >
             <Heading
               style={{
                 fontSize: "28px",
-                color: "#ffffff",
+                color: BRAND_YELLOW,
                 marginBottom: "15px",
                 textAlign: "center",
                 fontWeight: "bold",
               }}
             >
-              New Booking Notification
+              🔔 New Booking Alert!
             </Heading>
+            {isAdvancedBooking && (
+              <Section
+                style={{
+                  backgroundColor: BRAND_YELLOW,
+                  color: "#000000",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  textAlign: "center",
+                  marginBottom: "20px",
+                  display: "inline-block",
+                  width: "auto",
+                  margin: "0 auto 20px auto",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    margin: 0,
+                    color: "#000000",
+                  }}
+                >
+                  🔄 Advanced Booking (Client's Active Subscription)
+                </Text>
+              </Section>
+            )}
             <Text
               style={{
                 fontSize: "16px",
@@ -132,18 +162,21 @@ export default function BookingConfirmationTrainer({
                 padding: "25px",
                 borderRadius: "8px",
                 marginBottom: "20px",
+                border: `2px solid ${BRAND_YELLOW}`,
                 color: "#ffffff",
               }}
             >
               <Text
                 style={{
                   fontSize: "18px",
-                  color: "#ffffff",
+                  color: BRAND_YELLOW,
                   fontWeight: "bold",
                   marginBottom: "15px",
+                  borderBottom: `2px solid ${BRAND_YELLOW}`,
+                  paddingBottom: "10px",
                 }}
               >
-                Client Information
+                👤 Client Information
               </Text>
               <Text style={{ fontSize: "14px", color: "#d9d9d9", marginBottom: "8px" }}>
                 <strong>Client Name:</strong> {userName}
@@ -155,13 +188,15 @@ export default function BookingConfirmationTrainer({
               <Text
                 style={{
                   fontSize: "18px",
-                  color: "#ffffff",
+                  color: BRAND_YELLOW,
                   fontWeight: "bold",
                   marginTop: "20px",
                   marginBottom: "15px",
+                  borderBottom: `2px solid ${BRAND_YELLOW}`,
+                  paddingBottom: "10px",
                 }}
               >
-                Session Details
+                📋 Session Details
               </Text>
               <Text style={{ fontSize: "14px", color: "#d9d9d9", marginBottom: "8px" }}>
                 <strong>Package:</strong> {sessionName}
@@ -177,13 +212,13 @@ export default function BookingConfirmationTrainer({
               <Text
                 style={{
                   fontSize: "16px",
-                  color: "#ffffff",
+                  color: BRAND_YELLOW,
                   fontWeight: "bold",
                   marginTop: "20px",
                   marginBottom: "10px",
                 }}
               >
-                Scheduled Sessions:
+                📅 Scheduled Sessions:
               </Text>
               {slots.map((slot, index) => (
                 <Section
@@ -193,12 +228,13 @@ export default function BookingConfirmationTrainer({
                     padding: "15px",
                     borderRadius: "6px",
                     marginBottom: "10px",
+                    border: `2px solid ${BRAND_YELLOW}`,
                   }}
                 >
                   <Text
                     style={{
                       fontSize: "15px",
-                      color: "#F2D679",
+                      color: BRAND_YELLOW,
                       fontWeight: "bold",
                       marginBottom: "8px",
                     }}
@@ -236,16 +272,17 @@ export default function BookingConfirmationTrainer({
               <Button
                 href="https://www.breezewayfitness.com/super-admin/manage-trainer"
                 style={{
-                  backgroundColor: "#F2D679",
+                  backgroundColor: BRAND_YELLOW,
                   color: "#000000",
-                  padding: "12px 30px",
-                  borderRadius: "6px",
+                  padding: "14px 35px",
+                  borderRadius: "8px",
                   textDecoration: "none",
                   fontWeight: "bold",
                   fontSize: "16px",
+                  border: `2px solid ${BRAND_YELLOW}`,
                 }}
               >
-                View Booking Details
+                📊 View Booking Details
               </Button>
             </Section>
           </Section>
@@ -327,7 +364,7 @@ export default function BookingConfirmationTrainer({
               Visit our website —
               <a
                 href="https://www.breezewayfitness.com"
-                style={{ color: "#F2D679", textDecoration: "none" }}
+                style={{ color: BRAND_YELLOW, textDecoration: "none", fontWeight: "bold" }}
               >
                 {" "}www.breezewayfitness.com
               </a>

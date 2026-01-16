@@ -124,40 +124,110 @@ export const processWebhook = mutation({
 
       case "invoice.payment_succeeded": {
         const invoice = args.invoice as any;
+        console.log("✅ Payment succeeded for invoice:", invoice.id);
 
         if (invoice.subscription) {
-          // Update subscription status to active
+          console.log("🎉 Reactivating subscription:", invoice.subscription);
+
+          // Update subscription status to active (recovers from past_due)
           await ctx.runMutation(internal.subscriptions.updateStatus, {
             stripeSubscriptionId: invoice.subscription as string,
             status: "active",
           });
+
+          console.log(
+            "✅ Subscription is now active. User can book advanced slots again."
+          );
         }
         break;
       }
 
       case "invoice.payment_failed": {
         const invoice = args.invoice as any;
+        console.log("❌ Payment failed for invoice:", invoice.id);
 
         if (invoice.subscription) {
+          console.log(
+            "⚠️ Marking subscription as past_due:",
+            invoice.subscription
+          );
+
           // Update subscription status to past_due
           await ctx.runMutation(internal.subscriptions.updateStatus, {
             stripeSubscriptionId: invoice.subscription as string,
             status: "past_due",
           });
+
+          // Note: We don't cancel bookings immediately - Stripe will retry payment
+          // If payment ultimately fails after all retries, subscription will be cancelled
+          // and we'll handle it in customer.subscription.deleted
+          console.log(
+            "⏳ Subscription marked as past_due. Stripe will retry payment."
+          );
+          console.log(
+            "📌 Advanced bookings are preserved during grace period."
+          );
         }
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = args.subscription as any;
+        console.log("🚫 Subscription deleted:", subscription.id);
 
-        // Update subscription status to cancelled
-        await ctx.runMutation(internal.subscriptions.updateStatus, {
-          stripeSubscriptionId: subscription.id,
-          status: "cancelled",
-        });
+        // Find the subscription in our database
+        const dbSubscription = await ctx.db
+          .query("subscriptions")
+          .withIndex("by_stripe_subscription", (q) =>
+            q.eq("stripeSubscriptionId", subscription.id)
+          )
+          .first();
 
-        // TODO: Release future slots
+        if (dbSubscription) {
+          // Update subscription status to cancelled
+          await ctx.runMutation(internal.subscriptions.updateStatus, {
+            stripeSubscriptionId: subscription.id,
+            status: "cancelled",
+          });
+
+          // Cancel future advanced bookings (bookings after today)
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const todayString = today.toISOString().split("T")[0];
+
+          const futureBookings = await ctx.db
+            .query("bookings")
+            .withIndex("by_user_id", (q) =>
+              q.eq("userId", dbSubscription.userId)
+            )
+            .filter((q) =>
+              q.and(
+                q.eq(q.field("subscriptionId"), dbSubscription._id),
+                q.eq(q.field("isAdvancedBooking"), true),
+                q.eq(q.field("status"), "confirmed")
+              )
+            )
+            .collect();
+
+          // Cancel bookings that are in the future
+          let cancelledCount = 0;
+          for (const booking of futureBookings) {
+            const firstSlotDate = booking.slots[0]?.date;
+            if (firstSlotDate && firstSlotDate > todayString) {
+              await ctx.db.patch(booking._id, {
+                status: "cancelled",
+                updatedAt: Date.now(),
+              });
+              cancelledCount++;
+            }
+          }
+
+          console.log(
+            `🗑️ Cancelled ${cancelledCount} future advanced bookings`
+          );
+          console.log("📌 Past bookings are preserved for records");
+        }
+
         break;
       }
 
