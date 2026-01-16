@@ -43,6 +43,20 @@ export const getById = query({
   },
 });
 
+// Query to get archived sessions by trainer ID
+export const getArchivedByTrainerId = query({
+  args: { trainerId: v.id("trainers") },
+  handler: async (ctx, args) => {
+    const allSessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_trainer_id", (q) => q.eq("trainerId", args.trainerId))
+      .collect();
+
+    // Return only archived sessions
+    return allSessions.filter((session) => session.isArchived === true);
+  },
+});
+
 // Mutation to create a session
 export const create = mutation({
   args: {
@@ -162,6 +176,24 @@ export const archive = mutation({
 
     await ctx.db.patch(args.id, {
       isArchived: true,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Mutation to unarchive a session
+export const unarchive = mutation({
+  args: { id: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.id);
+    if (!session) {
+      throw new Error("Session not found");
+    }
+
+    await ctx.db.patch(args.id, {
+      isArchived: false,
       updatedAt: Date.now(),
     });
 

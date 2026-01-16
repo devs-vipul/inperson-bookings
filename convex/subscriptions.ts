@@ -159,6 +159,28 @@ export const getByTrainerId = query({
   },
 });
 
+// Get subscriptions by session ID (to check if session has active subscriptions)
+export const getBySessionId = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const subscriptions = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+
+    // Count active subscriptions
+    const activeCount = subscriptions.filter(
+      (sub) => sub.status === "active"
+    ).length;
+
+    return {
+      total: subscriptions.length,
+      active: activeCount,
+      subscriptions,
+    };
+  },
+});
+
 // Pause subscription
 export const pause = mutation({
   args: {

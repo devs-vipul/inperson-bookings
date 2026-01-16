@@ -18,9 +18,20 @@ import {
 } from "lucide-react";
 import { CreateSessionDialog } from "@/components/super-admin/create-session-dialog";
 import { EditAvailabilityDialog } from "@/components/super-admin/edit-availability-dialog";
+import { EditSessionDialog } from "@/components/super-admin/edit-session-dialog";
 import { PauseSubscriptionDialog } from "@/components/super-admin/pause-subscription-dialog";
 import { CancelSubscriptionAlert } from "@/components/super-admin/cancel-subscription-alert";
 import { EditResumeDateDialog } from "@/components/super-admin/edit-resume-date-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,18 +52,29 @@ export default function TrainerDetailPage({
   const { trainerId } = use(params);
   const [isAvailabilityDialogOpen, setIsAvailabilityDialogOpen] =
     useState(false);
-  const [activeSessionTab, setActiveSessionTab] = useState<"30" | "60">("30");
+  const [activeSessionTab, setActiveSessionTab] = useState<
+    "30" | "60" | "archived"
+  >("30");
   const [selectedSubscription, setSelectedSubscription] = useState<any | null>(
     null
   );
   const [isPauseDialogOpen, setIsPauseDialogOpen] = useState(false);
   const [isCancelAlertOpen, setIsCancelAlertOpen] = useState(false);
   const [isEditResumeDateOpen, setIsEditResumeDateOpen] = useState(false);
+  const [editingSessionId, setEditingSessionId] =
+    useState<Id<"sessions"> | null>(null);
+  const [archivingSessionId, setArchivingSessionId] =
+    useState<Id<"sessions"> | null>(null);
+  const [deletingSessionId, setDeletingSessionId] =
+    useState<Id<"sessions"> | null>(null);
 
   const trainer = useQuery(api.trainers.getById, {
     id: trainerId as Id<"trainers">,
   });
   const sessions = useQuery(api.sessions.getByTrainerId, {
+    trainerId: trainerId as Id<"trainers">,
+  });
+  const archivedSessions = useQuery(api.sessions.getArchivedByTrainerId, {
     trainerId: trainerId as Id<"trainers">,
   });
   const availability = useQuery(api.availability.getByTrainerId, {
@@ -65,6 +87,9 @@ export default function TrainerDetailPage({
   const toggleSlot = useMutation(api.availability.toggleSlot);
   const resumeSubscription = useMutation(api.subscriptions.resume);
   const resumeInStripe = useAction(api.subscriptions.resumeInStripe);
+  const archiveSession = useMutation(api.sessions.archive);
+  const unarchiveSession = useMutation(api.sessions.unarchive);
+  const deleteSession = useMutation(api.sessions.remove);
   const { toast } = useToast();
 
   if (
@@ -111,6 +136,59 @@ export default function TrainerDetailPage({
         variant: "destructive",
         title: "Error",
         description: "Failed to resume subscription",
+      });
+    }
+  };
+
+  const handleArchiveSession = async (sessionId: Id<"sessions">) => {
+    try {
+      await archiveSession({ id: sessionId });
+      toast({
+        title: "Success",
+        description: "Session archived successfully",
+      });
+      setArchivingSessionId(null);
+    } catch (error) {
+      console.error("Error archiving session:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to archive session",
+      });
+    }
+  };
+
+  const handleUnarchiveSession = async (sessionId: Id<"sessions">) => {
+    try {
+      await unarchiveSession({ id: sessionId });
+      toast({
+        title: "Success",
+        description: "Session unarchived successfully",
+      });
+    } catch (error) {
+      console.error("Error unarchiving session:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to unarchive session",
+      });
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: Id<"sessions">) => {
+    try {
+      await deleteSession({ id: sessionId });
+      toast({
+        title: "Success",
+        description: "Session deleted successfully",
+      });
+      setDeletingSessionId(null);
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete session",
       });
     }
   };
@@ -385,7 +463,7 @@ export default function TrainerDetailPage({
           <div className="space-y-6">
             {/* Custom Tabs */}
             <div
-              className="w-full md:w-fit grid grid-cols-2 border-b-2"
+              className="w-full md:w-fit grid grid-cols-3 border-b-2"
               style={{ borderColor: "#F2D578" }}
             >
               <button
@@ -411,6 +489,19 @@ export default function TrainerDetailPage({
                 className="py-3 px-6 text-base font-bold transition-all"
               >
                 60 Minutes Session
+              </button>
+              <button
+                onClick={() => setActiveSessionTab("archived")}
+                style={{
+                  backgroundColor:
+                    activeSessionTab === "archived" ? "#F2D578" : "#000000",
+                  color:
+                    activeSessionTab === "archived" ? "#000000" : "#F2D578",
+                  border: "2px solid #F2D578",
+                }}
+                className="py-3 px-6 text-base font-bold transition-all"
+              >
+                Archived
               </button>
             </div>
 
@@ -456,18 +547,59 @@ export default function TrainerDetailPage({
                               ${session.price}{" "}
                               <span className="text-sm">/ week</span>
                             </p>
-                            <Button
-                              size="sm"
-                              className="w-full font-bold border-2"
-                              style={{
-                                backgroundColor: "#F2D578",
-                                color: "#000000",
-                                borderColor: "#F2D578",
-                              }}
-                            >
-                              <Edit className="h-3 w-3 mr-2" />
-                              Edit
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 font-bold border-2"
+                                style={{
+                                  backgroundColor: "#F2D578",
+                                  color: "#000000",
+                                  borderColor: "#F2D578",
+                                }}
+                                onClick={() => setEditingSessionId(session._id)}
+                              >
+                                <Edit className="h-3 w-3 mr-2" />
+                                Edit
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-2"
+                                    style={{
+                                      borderColor: "#F2D578",
+                                      color: "#F2D578",
+                                    }}
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  className="bg-black border-2"
+                                  style={{ borderColor: "#F2D578" }}
+                                >
+                                  <DropdownMenuItem
+                                    className="text-white hover:bg-yellow-500/20 hover:text-yellow-500"
+                                    onClick={() =>
+                                      setArchivingSessionId(session._id)
+                                    }
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Archive
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-500 hover:bg-red-500/20"
+                                    onClick={() =>
+                                      setDeletingSessionId(session._id)
+                                    }
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                             <p className="text-xs text-center text-white/70 mt-2">
                               {session.sessionsPerWeek} session
                               {session.sessionsPerWeek > 1 ? "s" : ""} / week
@@ -526,18 +658,185 @@ export default function TrainerDetailPage({
                               ${session.price}{" "}
                               <span className="text-sm">/ week</span>
                             </p>
-                            <Button
-                              size="sm"
-                              className="w-full font-bold border-2"
-                              style={{
-                                backgroundColor: "#F2D578",
-                                color: "#000000",
-                                borderColor: "#F2D578",
-                              }}
-                            >
-                              <Edit className="h-3 w-3 mr-2" />
-                              Edit
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 font-bold border-2"
+                                style={{
+                                  backgroundColor: "#F2D578",
+                                  color: "#000000",
+                                  borderColor: "#F2D578",
+                                }}
+                                onClick={() => setEditingSessionId(session._id)}
+                              >
+                                <Edit className="h-3 w-3 mr-2" />
+                                Edit
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-2"
+                                    style={{
+                                      borderColor: "#F2D578",
+                                      color: "#F2D578",
+                                    }}
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  className="bg-black border-2"
+                                  style={{ borderColor: "#F2D578" }}
+                                >
+                                  <DropdownMenuItem
+                                    className="text-white hover:bg-yellow-500/20 hover:text-yellow-500"
+                                    onClick={() =>
+                                      setArchivingSessionId(session._id)
+                                    }
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Archive
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-500 hover:bg-red-500/20"
+                                    onClick={() =>
+                                      setDeletingSessionId(session._id)
+                                    }
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            <p className="text-xs text-center text-white/70 mt-2">
+                              {session.sessionsPerWeek} session
+                              {session.sessionsPerWeek > 1 ? "s" : ""} / week
+                            </p>
+                            <p className="text-xs text-center text-white/70">
+                              Recurring subscription
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeSessionTab === "archived" && (
+              <div className="mt-6">
+                {archivedSessions === undefined ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    Loading archived sessions...
+                  </p>
+                ) : archivedSessions.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No archived sessions.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {archivedSessions.map((session, idx) => (
+                      <motion.div
+                        key={session._id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: idx * 0.05 }}
+                      >
+                        <Card
+                          className="border-0 hover:shadow-xl transition-all opacity-75"
+                          style={{ backgroundColor: "#2d3748" }}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <span
+                                className="text-xs font-bold px-2 py-1 rounded"
+                                style={{
+                                  backgroundColor: "rgba(242, 213, 120, 0.2)",
+                                  color: "#F2D578",
+                                  border: "1px solid #F2D578",
+                                }}
+                              >
+                                {session.duration} minutes
+                              </span>
+                              <Badge
+                                className="text-xs font-bold"
+                                style={{
+                                  backgroundColor: "#666",
+                                  color: "#fff",
+                                }}
+                              >
+                                ARCHIVED
+                              </Badge>
+                            </div>
+                            <h3 className="font-bold text-lg mb-2 text-white">
+                              {session.name}
+                            </h3>
+                            <p className="text-xs text-white/70 mb-2">
+                              {session.description}
+                            </p>
+                            <p className="text-2xl font-bold mb-3 text-white">
+                              ${session.price}{" "}
+                              <span className="text-sm">/ week</span>
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 font-bold border-2"
+                                style={{
+                                  backgroundColor: "#F2D578",
+                                  color: "#000000",
+                                  borderColor: "#F2D578",
+                                }}
+                                onClick={() =>
+                                  handleUnarchiveSession(session._id)
+                                }
+                              >
+                                <Archive className="h-3 w-3 mr-2" />
+                                Unarchive
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-2"
+                                    style={{
+                                      borderColor: "#F2D578",
+                                      color: "#F2D578",
+                                    }}
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  className="bg-black border-2"
+                                  style={{ borderColor: "#F2D578" }}
+                                >
+                                  <DropdownMenuItem
+                                    className="text-white hover:bg-yellow-500/20 hover:text-yellow-500"
+                                    onClick={() =>
+                                      setEditingSessionId(session._id)
+                                    }
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-500 hover:bg-red-500/20"
+                                    onClick={() =>
+                                      setDeletingSessionId(session._id)
+                                    }
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                             <p className="text-xs text-center text-white/70 mt-2">
                               {session.sessionsPerWeek} session
                               {session.sessionsPerWeek > 1 ? "s" : ""} / week
@@ -804,6 +1103,155 @@ export default function TrainerDetailPage({
           />
         </>
       )}
+
+      {/* Edit Session Dialog */}
+      {editingSessionId && (
+        <EditSessionDialog
+          sessionId={editingSessionId}
+          trainerId={trainerId as Id<"trainers">}
+          open={!!editingSessionId}
+          onOpenChange={(open) => !open && setEditingSessionId(null)}
+        />
+      )}
+
+      {/* Archive Session Dialog */}
+      {archivingSessionId && (
+        <ArchiveSessionDialog
+          sessionId={archivingSessionId}
+          open={!!archivingSessionId}
+          onOpenChange={(open) => !open && setArchivingSessionId(null)}
+          onConfirm={handleArchiveSession}
+        />
+      )}
+
+      {/* Delete Session Dialog */}
+      {deletingSessionId && (
+        <DeleteSessionDialog
+          sessionId={deletingSessionId}
+          open={!!deletingSessionId}
+          onOpenChange={(open) => !open && setDeletingSessionId(null)}
+          onConfirm={handleDeleteSession}
+        />
+      )}
     </div>
+  );
+}
+
+// Archive Session Dialog Component
+function ArchiveSessionDialog({
+  sessionId,
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  sessionId: Id<"sessions">;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (sessionId: Id<"sessions">) => void;
+}) {
+  const subscriptionData = useQuery(api.subscriptions.getBySessionId, {
+    sessionId,
+  });
+
+  const activeCount = subscriptionData?.active ?? 0;
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent
+        className="bg-black border-2"
+        style={{ borderColor: "#F2D578" }}
+      >
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-white">
+            Archive Session
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-white/70">
+            {activeCount > 0
+              ? `This session has ${activeCount} active subscription(s). They will continue to work, but new users won't be able to subscribe to this session.`
+              : "This session will be archived and hidden from users. You can restore it later if needed."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            className="border-2"
+            style={{ borderColor: "#F2D578", color: "#F2D578" }}
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => onConfirm(sessionId)}
+            className="font-bold border-2"
+            style={{
+              backgroundColor: "#F2D578",
+              color: "#000000",
+              borderColor: "#F2D578",
+            }}
+          >
+            Archive
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+// Delete Session Dialog Component
+function DeleteSessionDialog({
+  sessionId,
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  sessionId: Id<"sessions">;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (sessionId: Id<"sessions">) => void;
+}) {
+  const subscriptionData = useQuery(api.subscriptions.getBySessionId, {
+    sessionId,
+  });
+
+  const activeCount = subscriptionData?.active ?? 0;
+  const totalCount = subscriptionData?.total ?? 0;
+  const hasSubscriptions = totalCount > 0;
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent
+        className="bg-black border-2"
+        style={{ borderColor: "#F2D578" }}
+      >
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-red-500">
+            Delete Session
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-white/70">
+            {hasSubscriptions
+              ? `⚠️ Cannot delete: This session has ${activeCount} active subscription(s) and ${totalCount} total subscription(s). Please archive instead to preserve data.`
+              : "⚠️ This action cannot be undone. This will permanently delete the session and all associated data."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            className="border-2"
+            style={{ borderColor: "#F2D578", color: "#F2D578" }}
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => onConfirm(sessionId)}
+            disabled={hasSubscriptions}
+            className="font-bold border-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: hasSubscriptions ? "#666" : "#ef4444",
+              color: "#ffffff",
+              borderColor: hasSubscriptions ? "#666" : "#ef4444",
+            }}
+          >
+            {hasSubscriptions ? "Cannot Delete" : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
