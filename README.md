@@ -6,13 +6,15 @@ Trainer availability, slot management, and user bookings built with Next.js, Con
 
 ## Features
 
-- **Super-admin trainer management**: create trainers, edit availability, create sessions with automatic Stripe product creation.
-- **Calendar-based slot management**: per trainer/date (30 & 60 min), with bulk toggle and per-slot toggles; booked slots are visible and locked.
-- **User booking flow**: availability-aware calendar, clean time slots, booked/disabled slots prevented, multi-slot selection up to package limit.
-- **Stripe payment integration**: recurring weekly subscriptions, automatic checkout, webhook handling for payment confirmation.
-- **Email notifications**: automatic booking confirmation emails sent to both user and trainer via Resend.
-- **Booking confirmation page**: modern, aesthetic confirmation screen after successful payment.
-- **User bookings list page**: view all booked sessions with trainer details (upcoming and past tabs).
+- **Advanced Booking System**: Active subscribers can book up to 3 weeks ahead without payment, with automatic weekly billing.
+- **Subscription Management**: Admin controls for pause/resume/cancel with automatic future booking cancellation.
+- **Super-admin trainer management**: Create trainers, edit availability, create sessions with automatic Stripe product creation.
+- **Calendar-based slot management**: Per trainer/date (30 & 60 min), with bulk toggle and per-slot toggles; booked slots are visible and locked.
+- **User booking flow**: Availability-aware calendar, clean time slots, booked/disabled slots prevented, multi-slot selection up to package limit.
+- **Stripe payment integration**: Recurring weekly subscriptions, automatic checkout, webhook handling, payment failure recovery.
+- **Email notifications**: Branded email templates with yellow theme, automatic booking confirmation to both user and trainer.
+- **Booking confirmation page**: Modern, aesthetic confirmation screen with subscription status indicators.
+- **User bookings list page**: View all booked sessions with trainer details (upcoming and past tabs).
 - **Robust timezone handling**: `dateToLocalString`, `getDayName` to avoid UTC day shifts; slots generated on clean intervals.
 
 ## Tech Stack
@@ -30,7 +32,7 @@ Trainer availability, slot management, and user bookings built with Next.js, Con
 - Admin calendar: `app/super-admin/manage-trainer/trainers/[trainerId]/calendar/page.tsx`
 - User booking: `app/(user)/book/[trainerId]/[sessionId]/page.tsx`
 - Booking confirmation: `app/(user)/booking-confirmation/page.tsx`
-- User bookings list: `app/(user)/your-bookings/page.tsx`
+- User bookings list: `app/(user)/my-bookings/page.tsx`
 - Stripe checkout API: `app/api/stripe/checkout/route.ts`
 - Stripe webhook handler: `app/api/stripe/webhook/route.ts`
 - Stripe product creation: `app/api/stripe/create-product/route.ts`
