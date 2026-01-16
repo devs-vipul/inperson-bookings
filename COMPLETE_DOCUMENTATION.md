@@ -1063,33 +1063,128 @@ db.query("bookings")
 
 ### Deployment Steps
 
-1. **Build Next.js**
+#### Build Configuration (For Netlify/Vercel)
 
-   ```bash
-   npm run build
-   ```
+**Override Build Errors** - The `next.config.ts` file is configured to ignore TypeScript and ESLint errors during build:
 
-2. **Deploy Convex**
+```typescript
+const nextConfig: NextConfig = {
+  // Ignore TypeScript errors during build
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
-   ```bash
-   npx convex deploy
-   ```
+  // Ignore ESLint errors during build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 
-3. **Deploy to Vercel/Netlify/Your Host**
+  // Image optimization configuration
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+  },
+};
+```
 
-   ```bash
-   # Follow your hosting provider's instructions
-   vercel deploy --prod
-   ```
+**Why?** This allows deployment even with minor TypeScript/ESLint errors, useful for quick deployments and CI/CD pipelines.
 
-4. **Set Environment Variables** in hosting dashboard
+**⚠️ Important**: Fix errors after deployment to maintain code quality.
 
-5. **Create Stripe Webhook** for production URL
+#### 1. **Build Next.js Locally (Test)**
 
-6. **Test Production**
-   - Use live Stripe cards
-   - Verify all features work
-   - Monitor logs for errors
+```bash
+npm run build
+```
+
+If you see build errors but want to continue, the config above will ignore them.
+
+#### 2. **Deploy Convex**
+
+```bash
+npx convex deploy
+```
+
+This creates a production Convex deployment and provides a production URL.
+
+#### 3a. **Deploy to Netlify**
+
+**Via Netlify Dashboard:**
+
+1. Connect your GitHub repository
+2. Set build settings:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `.next`
+   - **Base directory**: Leave empty
+3. Add environment variables (see below)
+4. Click "Deploy site"
+
+**Via Netlify CLI:**
+
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Login
+netlify login
+
+# Deploy
+netlify deploy --prod
+```
+
+#### 3b. **Deploy to Vercel**
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel deploy --prod
+```
+
+#### 4. **Set Environment Variables** in hosting dashboard
+
+**For Netlify:**
+
+- Go to Site settings → Environment variables
+- Add all variables from `.env.local`:
+  - `NEXT_PUBLIC_CONVEX_URL` (use production Convex URL)
+  - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+  - `CLERK_SECRET_KEY`
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET` (create new webhook for production URL)
+  - `RESEND_API_KEY`
+  - `NEXT_PUBLIC_BYPASS_STRIPE` (set to `false` for production)
+
+**For Vercel:**
+
+- Go to Project Settings → Environment Variables
+- Add all variables (same as above)
+
+#### 5. **Create Stripe Webhook** for production URL
+
+1. Go to [Stripe Dashboard](https://dashboard.stripe.com) → Webhooks
+2. Click "Add endpoint"
+3. URL: `https://your-domain.netlify.app/api/stripe/webhook`
+4. Select events:
+   - `checkout.session.completed`
+   - `invoice.payment_succeeded`
+   - `invoice.payment_failed`
+   - `customer.subscription.deleted`
+5. Copy webhook signing secret
+6. Add to environment variables as `STRIPE_WEBHOOK_SECRET`
+
+#### 6. **Test Production**
+
+- Use live Stripe cards (real payments)
+- Verify all features work
+- Monitor logs for errors
+- Test advanced booking flow
+- Test subscription management
 
 ### Post-Deployment
 

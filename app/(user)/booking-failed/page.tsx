@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { XCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-export default function BookingFailedPage() {
+function BookingFailedContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const error = searchParams.get("error") || "Payment was not completed";
@@ -137,5 +138,30 @@ export default function BookingFailedPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function BookingFailedPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <div
+              className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+              style={{ borderColor: "#F2D578", borderRightColor: "transparent" }}
+              role="status"
+            >
+              <span className="absolute -m-px h-px w-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]">
+                Loading...
+              </span>
+            </div>
+            <p className="mt-4 text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <BookingFailedContent />
+    </Suspense>
   );
 }
