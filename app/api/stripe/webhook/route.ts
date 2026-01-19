@@ -11,10 +11,15 @@ if (!webhookSecret) {
   throw new Error("STRIPE_WEBHOOK_SECRET is not set");
 }
 
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
-const convexClient = new ConvexHttpClient(convexUrl);
-
 export async function POST(request: NextRequest) {
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (!convexUrl) {
+    return NextResponse.json(
+      { error: "Convex URL not configured" },
+      { status: 500 }
+    );
+  }
+  const convexClient = new ConvexHttpClient(convexUrl);
   const body = await request.text();
   const signature = (await headers()).get("stripe-signature");
 

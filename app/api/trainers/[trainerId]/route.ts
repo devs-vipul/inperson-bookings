@@ -3,13 +3,19 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ trainerId: string }> }
 ) {
   try {
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    if (!convexUrl) {
+      return NextResponse.json(
+        { error: "Convex URL not configured" },
+        { status: 500 }
+      );
+    }
+    const convex = new ConvexHttpClient(convexUrl);
     const { trainerId } = await params;
 
     if (!trainerId) {
