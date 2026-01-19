@@ -10,7 +10,7 @@ Trainer availability, slot management, and user bookings built with Next.js, Con
 - **Subscription Management**: Admin controls for pause/resume/cancel with automatic future booking cancellation.
 - **Super-admin trainer management**: Create trainers, edit availability, create sessions with automatic Stripe product creation.
 - **Calendar-based slot management**: Per trainer/date (30 & 60 min), with bulk toggle and per-slot toggles; booked slots are visible and locked.
-- **User booking flow**: Availability-aware calendar, clean time slots, booked/disabled slots prevented, multi-slot selection up to package limit.
+- **User booking flow**: Availability-aware calendar, clean time slots, booked/disabled slots prevented, multi-slot selection up to package limit
 - **Stripe payment integration**: Recurring weekly subscriptions, automatic checkout, webhook handling, payment failure recovery.
 - **Email notifications**: Branded email templates with yellow theme, automatic booking confirmation to both user and trainer.
 - **Booking confirmation page**: Modern, aesthetic confirmation screen with subscription status indicators.
