@@ -114,6 +114,8 @@ export async function POST(request: NextRequest) {
       }
       
       try {
+        const unitAmountCents = Math.round(price * 100); // Convert dollars to cents
+
         const product = await stripe.products.create({
           name: `${sessionName} - ${trainerName}`,
           description: `${sessionsPerWeek} session${sessionsPerWeek > 1 ? "s" : ""} per week (${duration} minutes each)`,
@@ -126,15 +128,15 @@ export async function POST(request: NextRequest) {
         });
         productId = product.id;
 
-        const price = await stripe.prices.create({
+        const stripePrice = await stripe.prices.create({
           product: productId,
-          unit_amount: Math.round(price * 100), // Convert to cents
+          unit_amount: unitAmountCents,
           currency: "usd",
           recurring: {
             interval: "week",
           },
         });
-        priceId = price.id;
+        priceId = stripePrice.id;
 
         // Update session with Stripe IDs for future use
         await convex.mutation(api.sessions.update, {
