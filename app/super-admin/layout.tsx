@@ -16,7 +16,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Users, UserCog } from "lucide-react";
+import { Users, UserCog, Ticket } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -31,6 +31,11 @@ const menuItems = [
     title: "Trainers",
     icon: UserCog,
     href: "/super-admin/trainers",
+  },
+  {
+    title: "Coupons",
+    icon: Ticket,
+    href: "/super-admin/coupons",
   },
 ];
 
