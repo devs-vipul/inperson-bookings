@@ -22,6 +22,7 @@ import { EditSessionDialog } from "@/components/super-admin/edit-session-dialog"
 import { PauseSubscriptionDialog } from "@/components/super-admin/pause-subscription-dialog";
 import { CancelSubscriptionAlert } from "@/components/super-admin/cancel-subscription-alert";
 import { EditResumeDateDialog } from "@/components/super-admin/edit-resume-date-dialog";
+import { EditTrainerDialog } from "@/components/super-admin/edit-trainer-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,6 +95,7 @@ export default function TrainerDetailPage({
   const deleteSession = useMutation(api.sessions.remove);
   const archiveTrainer = useMutation(api.trainers.archive);
   const { toast } = useToast();
+  const [isEditTrainerOpen, setIsEditTrainerOpen] = useState(false);
 
   if (
     trainer === undefined ||
@@ -291,10 +293,18 @@ export default function TrainerDetailPage({
                 <Button
                   size="sm"
                   className="font-medium bg-white text-black border-0 hover:bg-white/90"
+                  onClick={() => setIsEditTrainerOpen(true)}
                 >
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit Trainer Profile
                 </Button>
+                {trainer && (
+                  <EditTrainerDialog
+                    open={isEditTrainerOpen}
+                    onOpenChange={setIsEditTrainerOpen}
+                    trainer={trainer as any}
+                  />
+                )}
                 <div>
                   <CreateSessionDialog trainerId={trainer._id} />
                 </div>
