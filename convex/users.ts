@@ -35,12 +35,14 @@ export const upsertFromClerk = mutation({
 
     if (existing) {
       // Update existing user
+      // IMPORTANT: Never wipe role during Clerk sync.
+      // Only update role if explicitly provided by a trusted caller.
       await ctx.db.patch(existing._id, {
         name: args.name,
         email: args.email,
         image: args.image,
         phone: args.phone,
-        role: args.role,
+        ...(args.role !== undefined ? { role: args.role } : {}),
       });
       return existing._id;
     } else {
