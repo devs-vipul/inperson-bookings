@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Ticket } from "lucide-react";
+import { CreateCouponForm } from "@/components/super-admin/create-coupon-form";
+import { CouponsTable } from "@/components/super-admin/coupons-table";
 
 export default function CouponsPage() {
+  const [activeTab, setActiveTab] = useState<"create" | "list" | "archived">(
+    "list"
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -18,40 +23,67 @@ export default function CouponsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="create" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="create" className="flex items-center gap-2">
+      {/* Custom Tabs (match Trainers page styling) */}
+      <div className="space-y-6">
+        <div
+          className="w-full md:w-fit grid grid-cols-3 border-b-2"
+          style={{ borderColor: "#F2D578" }}
+        >
+          <button
+            onClick={() => setActiveTab("create")}
+            style={{
+              backgroundColor: activeTab === "create" ? "#F2D578" : "#000000",
+              color: activeTab === "create" ? "#000000" : "#F2D578",
+              border: "2px solid #F2D578",
+            }}
+            className="py-3 px-6 text-base font-bold transition-all flex items-center justify-center gap-2"
+          >
             <Plus className="h-4 w-4" />
             Create Coupon
-          </TabsTrigger>
-          <TabsTrigger value="list" className="flex items-center gap-2">
+          </button>
+          <button
+            onClick={() => setActiveTab("list")}
+            style={{
+              backgroundColor: activeTab === "list" ? "#F2D578" : "#000000",
+              color: activeTab === "list" ? "#000000" : "#F2D578",
+              border: "2px solid #F2D578",
+            }}
+            className="py-3 px-6 text-base font-bold transition-all flex items-center justify-center gap-2"
+          >
             <Ticket className="h-4 w-4" />
             Coupons
-          </TabsTrigger>
-        </TabsList>
+          </button>
+          <button
+            onClick={() => setActiveTab("archived")}
+            style={{
+              backgroundColor: activeTab === "archived" ? "#F2D578" : "#000000",
+              color: activeTab === "archived" ? "#000000" : "#F2D578",
+              border: "2px solid #F2D578",
+            }}
+            className="py-3 px-6 text-base font-bold transition-all"
+          >
+            Archived Coupons
+          </button>
+        </div>
 
-        <TabsContent value="create" className="mt-6">
-          <div className="rounded-lg border-2 p-6" style={{ borderColor: "#F2D578" }}>
-            <h2 className="text-xl font-semibold mb-4" style={{ color: "#F2D578" }}>
-              Create New Coupon
-            </h2>
-            <p className="text-muted-foreground">
-              Coupon creation form will be implemented here.
-            </p>
+        {activeTab === "create" && (
+          <div className="space-y-4">
+            <CreateCouponForm />
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="list" className="mt-6">
-          <div className="rounded-lg border-2 p-6" style={{ borderColor: "#F2D578" }}>
-            <h2 className="text-xl font-semibold mb-4" style={{ color: "#F2D578" }}>
-              All Coupons
-            </h2>
-            <p className="text-muted-foreground">
-              Coupons list will be displayed here.
-            </p>
+        {activeTab === "list" && (
+          <div className="space-y-4">
+            <CouponsTable />
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+
+        {activeTab === "archived" && (
+          <div className="space-y-4">
+            <CouponsTable archivedOnly />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -140,4 +140,21 @@ export default defineSchema({
     .index("by_trainer_id", ["trainerId"])
     .index("by_trainer_date", ["trainerId", "date"])
     .index("by_trainer_date_duration", ["trainerId", "date", "duration"]),
+
+  // Discount codes / Coupons
+  discountCode: defineTable({
+    name: v.string(), // Coupon name
+    code: v.string(), // Coupon code (e.g., "DISCOUNT2023")
+    disc_type: v.union(v.literal("percentage"), v.literal("flat")), // Discount type
+    add_disc: v.number(), // Discount amount or percentage
+    stripeCouponId: v.string(), // Stripe coupon ID
+    stripePromotionCodeId: v.optional(v.string()), // Stripe promotion code ID
+    validity: v.number(), // Validity in months
+    isArchived: v.optional(v.boolean()), // Archive status
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_stripe_coupon_id", ["stripeCouponId"])
+    .index("by_archived", ["isArchived"]),
 });

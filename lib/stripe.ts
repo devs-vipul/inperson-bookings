@@ -8,6 +8,8 @@ function getStripe(): Stripe {
     if (!stripeKey) {
       throw new Error("STRIPE_SECRET_KEY is not set");
     }
+    // Match the Stripe Dashboard API version (seen in your webhook destination UI).
+    // Mismatches can cause "Received unknown parameter" errors.
     stripeInstance = new Stripe(stripeKey, {
       apiVersion: "2025-12-15.clover",
       typescript: true,

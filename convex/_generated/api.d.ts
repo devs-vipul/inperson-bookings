@@ -10,6 +10,7 @@
 
 import type * as availability from "../availability.js";
 import type * as bookings from "../bookings.js";
+import type * as coupons from "../coupons.js";
 import type * as crons from "../crons.js";
 import type * as emails from "../emails.js";
 import type * as http from "../http.js";
@@ -31,6 +32,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   availability: typeof availability;
   bookings: typeof bookings;
+  coupons: typeof coupons;
   crons: typeof crons;
   emails: typeof emails;
   http: typeof http;
