@@ -96,7 +96,10 @@ export function EditSessionDialog({
   const hasActiveSubscriptions = (subscriptionData?.active ?? 0) > 0;
   const activeCount = subscriptionData?.active ?? 0;
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const onSubmit = async (data: SessionFormValues) => {
+    setIsLoading(true);
     try {
       // Check if critical fields changed and there are active subscriptions
       const criticalFieldsChanged =
@@ -124,17 +127,14 @@ export function EditSessionDialog({
         price: data.price,
       });
 
-      // Update Stripe product if name or description changed
-      if (
-        session?.stripeProductId &&
-        (data.name !== session.name || data.description !== session.description)
-      ) {
+      // Update Stripe product if it exists
+      if (session?.stripeProductId && session?.stripePriceId) {
         try {
           const trainer = await fetch(`/api/trainers/${trainerId}`).then(
             (res) => res.json()
           );
 
-          await fetch("/api/stripe/create-product", {
+          await fetch("/api/stripe/update-product", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -148,6 +148,8 @@ export function EditSessionDialog({
               duration: data.duration,
               price: data.price,
               trainerName: trainer?.name || "Trainer",
+              stripeProductId: session.stripeProductId,
+              stripePriceId: session.stripePriceId,
             }),
           });
         } catch (stripeError) {
@@ -177,6 +179,8 @@ export function EditSessionDialog({
             ? error.message
             : "Failed to update session. Please try again.",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -342,6 +346,7 @@ export function EditSessionDialog({
               </Button>
               <Button
                 type="submit"
+                disabled={isLoading}
                 className="font-bold border-2"
                 style={{
                   backgroundColor: "#F2D578",
@@ -349,8 +354,17 @@ export function EditSessionDialog({
                   borderColor: "#F2D578",
                 }}
               >
-                <Edit className="h-4 w-4 mr-2" />
-                Update Session
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 mr-2 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update Session
+                  </>
+                )}
               </Button>
             </div>
           </form>

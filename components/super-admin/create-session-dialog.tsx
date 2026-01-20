@@ -55,6 +55,7 @@ export function CreateSessionDialog({
   trainerId: Id<"trainers">;
 }) {
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const createSession = useMutation(api.sessions.create);
 
@@ -70,6 +71,8 @@ export function CreateSessionDialog({
   });
 
   const onSubmit = async (data: SessionFormValues) => {
+    if (isLoading) return; // Prevent multiple submissions
+    setIsLoading(true);
     try {
       const sessionId = await createSession({
         trainerId,
@@ -129,6 +132,8 @@ export function CreateSessionDialog({
             ? error.message
             : "Failed to create session. Please try again.",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -268,7 +273,16 @@ export function CreateSessionDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit">Create Session</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Session"
+                )}
+              </Button>
             </div>
           </form>
         </Form>
