@@ -20,9 +20,10 @@ function BookingConfirmationContent() {
   const bookingId = searchParams.get("booking_id");
   const bypass = searchParams.get("bypass") === "true";
   const advanced = searchParams.get("advanced") === "true";
-  const isDirectBooking = bypass || advanced; // Either bypass or advanced booking
+  const isMonthly = searchParams.get("monthly") === "true";
+  const isDirectBooking = bypass || advanced || isMonthly; // Either bypass, advanced, or monthly booking
 
-  // Fetch booking - either by Stripe session ID or booking ID (for bypass/advanced mode)
+  // Fetch booking - either by Stripe session ID or booking ID (for bypass/advanced/monthly mode)
   const bookingBySession = useQuery(
     api.stripe.getByStripeSession,
     sessionId && !isDirectBooking ? { sessionId } : "skip"
@@ -30,10 +31,15 @@ function BookingConfirmationContent() {
 
   const bookingById = useQuery(
     api.bookings.getById,
-    bookingId && isDirectBooking ? { id: bookingId as Id<"bookings"> } : "skip"
+    bookingId && isDirectBooking && !isMonthly ? { id: bookingId as Id<"bookings"> } : "skip"
   );
 
-  const booking = isDirectBooking ? bookingById : bookingBySession;
+  const monthlyBookingById = useQuery(
+    (api as any).monthlyBookings?.getById,
+    bookingId && isMonthly ? { id: bookingId as Id<"monthlyBookings"> } : "skip"
+  );
+
+  const booking = isMonthly ? monthlyBookingById : (isDirectBooking ? bookingById : bookingBySession);
 
   if (!sessionId && !bookingId) {
     return (
@@ -99,12 +105,18 @@ function BookingConfirmationContent() {
     );
   }
 
-  const { trainer, session, slots } = booking;
-  const totalAmount = booking.amountPaid
-    ? (booking.amountPaid / 100).toFixed(2)
-    : bypass || advanced
-      ? "0.00"
-      : "0.00";
+  // Handle monthly vs weekly booking structure
+  const isMonthlyBooking = isMonthly && monthlyBookingById;
+  const trainer = isMonthlyBooking ? booking?.trainer : booking?.trainer;
+  const session = isMonthlyBooking ? null : booking?.session;
+  const slots = isMonthlyBooking ? booking?.slots || [] : booking?.slots || [];
+  const totalAmount = isMonthlyBooking
+    ? "0.00" // Monthly bookings are already paid via subscription
+    : booking?.amountPaid
+      ? (booking.amountPaid / 100).toFixed(2)
+      : bypass || advanced
+        ? "0.00"
+        : "0.00";
 
   return (
     <div className="min-h-screen bg-background">
@@ -161,6 +173,14 @@ function BookingConfirmationContent() {
                 (Advanced Booking)
               </span>
             )}
+            {isMonthly && (
+              <span
+                className="block mt-2 text-sm font-bold"
+                style={{ color: "#F2D578" }}
+              >
+                (Monthly Subscription Booking)
+              </span>
+            )}
           </p>
         </motion.div>
 
@@ -209,7 +229,7 @@ function BookingConfirmationContent() {
                 </div>
               </div>
 
-              {/* Session Info */}
+              {/* Session Info - Only show for weekly bookings */}
               {session && (
                 <div
                   className="rounded-lg border-2 p-4"
@@ -245,54 +265,133 @@ function BookingConfirmationContent() {
                 </div>
               )}
 
-              {/* Payment Info */}
-              <div
-                className="rounded-lg border-2 p-4"
-                style={{
-                  borderColor: "#F2D578",
-                  backgroundColor: "rgba(242, 213, 120, 0.05)",
-                }}
-              >
-                <div className="mb-3 flex items-center gap-2">
-                  <CreditCard
-                    className="h-5 w-5"
-                    style={{ color: "#F2D578" }}
-                  />
+              {/* Monthly Subscription Info */}
+              {isMonthlyBooking && booking?.subscription && (
+                <div
+                  className="rounded-lg border-2 p-4"
+                  style={{
+                    borderColor: "#F2D578",
+                    backgroundColor: "rgba(242, 213, 120, 0.05)",
+                  }}
+                >
                   <h4
-                    className="font-bold text-lg"
+                    className="mb-3 font-bold text-lg"
                     style={{ color: "#F2D578" }}
                   >
-                    Payment
+                    Monthly Subscription
                   </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground font-medium">
+                        Valid From
+                      </p>
+                      <p className="font-bold text-lg">
+                        {new Date(booking.subscription.startDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground font-medium">
+                        Valid Until
+                      </p>
+                      <p className="font-bold text-lg">
+                        {new Date(booking.subscription.endDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground font-medium">
-                    Amount Paid
-                  </span>
-                  <span
-                    className="font-bold text-xl"
-                    style={{ color: "#F2D578" }}
-                  >
-                    ${totalAmount} {booking.currency?.toUpperCase() || "USD"}
-                  </span>
+              )}
+
+              {/* Payment Info - Only show for weekly bookings */}
+              {!isMonthlyBooking && (
+                <div
+                  className="rounded-lg border-2 p-4"
+                  style={{
+                    borderColor: "#F2D578",
+                    backgroundColor: "rgba(242, 213, 120, 0.05)",
+                  }}
+                >
+                  <div className="mb-3 flex items-center gap-2">
+                    <CreditCard
+                      className="h-5 w-5"
+                      style={{ color: "#F2D578" }}
+                    />
+                    <h4
+                      className="font-bold text-lg"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Payment
+                    </h4>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">
+                      Amount Paid
+                    </span>
+                    <span
+                      className="font-bold text-xl"
+                      style={{ color: "#F2D578" }}
+                    >
+                      ${totalAmount} {booking?.currency?.toUpperCase() || "USD"}
+                    </span>
+                  </div>
+                  {advanced && (
+                    <p
+                      className="mt-2 text-xs font-medium"
+                      style={{ color: "#F2D578" }}
+                    >
+                      ✓ Covered by your active subscription
+                    </p>
+                  )}
+                  {booking?.stripeSubscriptionId && !advanced && (
+                    <p
+                      className="mt-2 text-xs font-medium"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Recurring weekly payment enabled
+                    </p>
+                  )}
                 </div>
-                {advanced && (
+              )}
+
+              {/* Monthly Booking Payment Info */}
+              {isMonthlyBooking && (
+                <div
+                  className="rounded-lg border-2 p-4"
+                  style={{
+                    borderColor: "#F2D578",
+                    backgroundColor: "rgba(242, 213, 120, 0.05)",
+                  }}
+                >
+                  <div className="mb-3 flex items-center gap-2">
+                    <CreditCard
+                      className="h-5 w-5"
+                      style={{ color: "#F2D578" }}
+                    />
+                    <h4
+                      className="font-bold text-lg"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Payment
+                    </h4>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">
+                      Booking Type
+                    </span>
+                    <span
+                      className="font-bold text-xl"
+                      style={{ color: "#F2D578" }}
+                    >
+                      Monthly Subscription
+                    </span>
+                  </div>
                   <p
                     className="mt-2 text-xs font-medium"
                     style={{ color: "#F2D578" }}
                   >
-                    ✓ Covered by your active subscription
+                    ✓ Covered by your active monthly subscription
                   </p>
-                )}
-                {booking.stripeSubscriptionId && !advanced && (
-                  <p
-                    className="mt-2 text-xs font-medium"
-                    style={{ color: "#F2D578" }}
-                  >
-                    Recurring weekly payment enabled
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Booked Slots */}
               <div>

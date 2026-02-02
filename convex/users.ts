@@ -67,6 +67,38 @@ export const getAll = query({
   },
 });
 
+// Query to search users by name or email (backend-driven search)
+export const search = query({
+  args: {
+    searchTerm: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const searchLower = args.searchTerm.toLowerCase().trim();
+    
+    if (!searchLower) {
+      // If empty search, return all users
+      return await ctx.db.query("users").order("desc").collect();
+    }
+
+    const allUsers = await ctx.db.query("users").collect();
+    
+    // Filter users by name or email (case-insensitive)
+    return allUsers.filter((user) => {
+      const nameMatch = user.name?.toLowerCase().includes(searchLower);
+      const emailMatch = user.email?.toLowerCase().includes(searchLower);
+      return nameMatch || emailMatch;
+    });
+  },
+});
+
+// Query to get user by ID
+export const getById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
 // Mutation to update user role (only super admins can do this)
 export const updateRole = mutation({
   args: {

@@ -43,17 +43,8 @@ export const processWebhook = mutation({
         const metadata = session.metadata || {};
         console.log("📋 Metadata:", metadata);
 
-        const trainerId = metadata.trainerId as Id<"trainers">;
-        const sessionId = metadata.sessionId as Id<"sessions">;
         const clerkUserId = metadata.clerkUserId;
-        const slots = JSON.parse(metadata.slots || "[]");
-        const sessionsPerWeek = parseInt(metadata.sessionsPerWeek || "1");
-
-        console.log("👤 Clerk User ID:", clerkUserId);
-        console.log("🎯 Trainer ID:", trainerId);
-        console.log("📅 Session ID:", sessionId);
-        console.log("🕐 Slots:", slots);
-        console.log("📊 Sessions per week:", sessionsPerWeek);
+        const paymentType = metadata.type;
 
         // Find user by Clerk ID
         console.log("🔍 Looking up user by Clerk ID:", clerkUserId);
@@ -70,6 +61,46 @@ export const processWebhook = mutation({
         }
 
         console.log("✅ User found:", user._id, user.email);
+
+        // Handle monthly unlock payment
+        if (paymentType === "monthly_unlock") {
+          console.log("🔓 Processing monthly unlock payment...");
+          
+          const productId = metadata.productId;
+          const durationMonths = parseInt(metadata.durationMonths || "1");
+          
+          // Calculate end date based on product duration
+          const startDate = new Date().toISOString();
+          const endDate = new Date(
+            Date.now() + durationMonths * 30 * 24 * 60 * 60 * 1000 // durationMonths * 30 days
+          ).toISOString();
+
+          // Create monthly subscription
+          await ctx.runMutation((internal as any).monthlySubscriptions.create, {
+            userId: user._id,
+            stripeCheckoutSessionId: session.id,
+            stripePaymentIntentId: session.payment_intent as string | undefined,
+            amountPaid: session.amount_total || 0,
+            currency: session.currency || "usd",
+            paymentStatus: "paid",
+            startDate,
+            endDate,
+          });
+
+          console.log(`✅ Monthly subscription created successfully for ${durationMonths} month(s)!`);
+          break;
+        }
+
+        // Handle regular weekly booking
+        const trainerId = metadata.trainerId as Id<"trainers">;
+        const sessionId = metadata.sessionId as Id<"sessions">;
+        const slots = JSON.parse(metadata.slots || "[]");
+        const sessionsPerWeek = parseInt(metadata.sessionsPerWeek || "1");
+
+        console.log("🎯 Trainer ID:", trainerId);
+        console.log("📅 Session ID:", sessionId);
+        console.log("🕐 Slots:", slots);
+        console.log("📊 Sessions per week:", sessionsPerWeek);
 
         // Create booking
         console.log("💾 Creating booking...");

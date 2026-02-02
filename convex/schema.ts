@@ -157,4 +157,80 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_stripe_coupon_id", ["stripeCouponId"])
     .index("by_archived", ["isArchived"]),
+
+  // Monthly subscriptions - tracks monthly unlock payments
+  monthlySubscriptions: defineTable({
+    userId: v.id("users"),
+    stripeCheckoutSessionId: v.string(), // Stripe Checkout Session ID
+    stripePaymentIntentId: v.optional(v.string()), // Stripe Payment Intent ID
+    amountPaid: v.number(), // Amount paid in cents (e.g., 10000 for $100)
+    currency: v.string(), // Currency code (e.g., "usd")
+    paymentStatus: v.string(), // "pending", "paid", "failed", "refunded"
+    startDate: v.string(), // ISO date string - when payment was made
+    endDate: v.string(), // ISO date string - 1 month from startDate
+    isActive: v.boolean(), // Whether the subscription is currently active
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_id", ["userId"])
+    .index("by_stripe_session", ["stripeCheckoutSessionId"])
+    .index("by_user_active", ["userId", "isActive"])
+    .index("by_end_date", ["endDate"]),
+
+  // Monthly bookings - tracks individual slot bookings in monthly plan
+  monthlyBookings: defineTable({
+    monthlySubscriptionId: v.id("monthlySubscriptions"),
+    userId: v.id("users"),
+    trainerId: v.id("trainers"),
+    slots: v.array(
+      v.object({
+        date: v.string(), // Date in "YYYY-MM-DD" format
+        startTime: v.string(), // Time in "HH:MM" format (24-hour)
+        endTime: v.string(), // Time in "HH:MM" format (24-hour)
+        duration: v.number(), // 30 or 60 minutes
+      })
+    ),
+    status: v.string(), // "confirmed", "cancelled", "completed"
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_subscription_id", ["monthlySubscriptionId"])
+    .index("by_user_id", ["userId"])
+    .index("by_trainer_id", ["trainerId"])
+    .index("by_status", ["status"]),
+
+  // Slot capacity tracking for monthly bookings (5 users per slot)
+  slotCapacity: defineTable({
+    trainerId: v.id("trainers"),
+    date: v.string(), // Date in "YYYY-MM-DD" format
+    startTime: v.string(), // Time in "HH:MM" format (24-hour)
+    endTime: v.string(), // Time in "HH:MM" format (24-hour)
+    duration: v.number(), // 30 or 60 minutes
+    currentBookings: v.number(), // Current number of bookings (0-5)
+    maxCapacity: v.number(), // Maximum capacity (5 for monthly, 1 for weekly)
+    bookingType: v.union(v.literal("weekly"), v.literal("monthly")), // Type of booking
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_trainer_date", ["trainerId", "date"])
+    .index("by_trainer_date_time", ["trainerId", "date", "startTime", "endTime"])
+    .index("by_booking_type", ["bookingType"]),
+
+  // Monthly subscription products - created by admin
+  monthlyProducts: defineTable({
+    name: v.string(), // Product name (e.g., "Monthly Access - Basic")
+    description: v.string(), // Product description
+    price: v.number(), // Price in dollars (e.g., 100.00)
+    durationMonths: v.number(), // Duration in months (e.g., 1, 3, 6, 12)
+    stripeProductId: v.string(), // Stripe Product ID
+    stripePriceId: v.string(), // Stripe Price ID
+    isActive: v.boolean(), // Whether this product is active/available
+    isArchived: v.optional(v.boolean()), // Archive status
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_stripe_product", ["stripeProductId"])
+    .index("by_stripe_price", ["stripePriceId"])
+    .index("by_active", ["isActive"])
+    .index("by_archived", ["isArchived"]),
 });

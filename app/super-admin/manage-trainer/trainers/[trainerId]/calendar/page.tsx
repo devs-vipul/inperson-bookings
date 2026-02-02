@@ -52,6 +52,12 @@ export default function TrainerCalendarPage({
     trainerId: trainerId as Id<"trainers">,
   });
 
+  // Fetch monthly bookings for this trainer (to check capacity conflicts)
+  const monthlyBookings = useQuery(
+    (api as any).monthlyBookings?.getByTrainerId,
+    { trainerId: trainerId as Id<"trainers"> }
+  );
+
   const toggleSlot = useMutation(api.trainerSlots.toggleSlot);
   const setSlotsForDate = useMutation(api.trainerSlots.setSlotsForDate);
 
@@ -93,14 +99,12 @@ export default function TrainerCalendarPage({
     }
   }, [selectedDate, availability, selectedDuration]);
 
-  // Helper to check if a slot is booked
+  // Helper to check if a slot is booked (checks BOTH weekly and monthly)
   const isSlotBooked = (
     dateString: string,
     startTime: string,
     endTime: string
   ): boolean => {
-    if (!existingBookings) return false;
-
     // Convert times to minutes for comparison
     const timeToMinutes = (time: string): number => {
       const [hours, minutes] = time.split(":").map(Number);
@@ -110,25 +114,49 @@ export default function TrainerCalendarPage({
     const requestedStart = timeToMinutes(startTime);
     const requestedEnd = timeToMinutes(endTime);
 
-    // Check all bookings for conflicts
-    for (const booking of existingBookings) {
-      // Only check confirmed bookings (ignore cancelled and paused)
-      if (booking.status !== "confirmed") continue;
+    // Check weekly bookings (these block the slot completely - 1 user per slot)
+    if (existingBookings) {
+      for (const booking of existingBookings) {
+        // Only check confirmed bookings (ignore cancelled and paused)
+        if (booking.status !== "confirmed") continue;
 
-      for (const slot of booking.slots) {
-        if (slot.date === dateString) {
-          const slotStart = timeToMinutes(slot.startTime);
-          const slotEnd = timeToMinutes(slot.endTime);
+        for (const slot of booking.slots) {
+          if (slot.date === dateString) {
+            const slotStart = timeToMinutes(slot.startTime);
+            const slotEnd = timeToMinutes(slot.endTime);
 
-          // Check if times overlap
-          if (
-            (requestedStart >= slotStart && requestedStart < slotEnd) ||
-            (requestedEnd > slotStart && requestedEnd <= slotEnd) ||
-            (requestedStart <= slotStart && requestedEnd >= slotEnd)
-          ) {
-            return true;
+            // Check if times overlap
+            if (
+              (requestedStart >= slotStart && requestedStart < slotEnd) ||
+              (requestedEnd > slotStart && requestedEnd <= slotEnd) ||
+              (requestedStart <= slotStart && requestedEnd >= slotEnd)
+            ) {
+              return true; // Weekly booking blocks the slot
+            }
           }
         }
+      }
+    }
+
+    // Check monthly bookings - if a slot has 5 users, it's full and blocks weekly bookings
+    if (monthlyBookings) {
+      let monthlyCount = 0;
+      for (const booking of monthlyBookings) {
+        if (booking.status !== "confirmed") continue;
+        for (const slot of booking.slots) {
+          if (
+            slot.date === dateString &&
+            slot.startTime === startTime &&
+            slot.endTime === endTime
+          ) {
+            monthlyCount++;
+            break; // Found match, move to next booking
+          }
+        }
+      }
+      // If slot is full (5 users), it blocks weekly bookings
+      if (monthlyCount >= 5) {
+        return true;
       }
     }
 
@@ -326,7 +354,8 @@ export default function TrainerCalendarPage({
     trainer === undefined ||
     availability === undefined ||
     existingSlots === undefined ||
-    existingBookings === undefined
+    existingBookings === undefined ||
+    monthlyBookings === undefined
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
