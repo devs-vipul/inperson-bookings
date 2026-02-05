@@ -392,7 +392,7 @@ export const updateResumeDate = mutation({
       
       // Check if booking falls within the pause period (today to resume date)
       const isInPausePeriod = 
-        firstSlotDate >= todayString && 
+        firstSlotDate >= todayString &&
         firstSlotDate < newResumeDateString;
       
       // Check if booking is after the resume date (should be confirmed)
@@ -411,10 +411,10 @@ export const updateResumeDate = mutation({
         // Restore bookings after resume date (only if currently paused)
         // These were likely paused during a previous pause but should now be active
         if (booking.status === "paused") {
-          await ctx.db.patch(booking._id, {
+        await ctx.db.patch(booking._id, {
             status: "confirmed",
-            updatedAt: Date.now(),
-          });
+          updatedAt: Date.now(),
+        });
           restoredCount++;
         }
       }
